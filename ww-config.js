@@ -132,6 +132,9 @@ export default {
                 'removeIcon',
                 'removeIconColor',
                 'removeIconSize',
+                'mentionsTitle',
+                'mentionsColor',
+                'mentionsBgColor',
                 'imagePreviewTitle',
                 'messagesAttachmentThumbMaxWidth',
                 'messagesAttachmentThumbMaxHeight',
@@ -1753,6 +1756,53 @@ export default {
             propertyHelp: {
                 tooltip:
                     'Remove button icon size.\n\nExample: `16px`',
+            },
+            /* wwEditor:end */
+        },
+
+        // Mentions styling
+        mentionsTitle: {
+            type: 'Title',
+            label: { en: 'Mentions' },
+            section: 'style',
+        },
+        mentionsColor: {
+            label: { en: 'Mentions Color' },
+            type: 'Color',
+            section: 'style',
+            bindable: true,
+            classes: true,
+            states: true,
+            responsive: true,
+            defaultValue: '#3b82f6',
+            /* wwEditor:start */
+            bindingValidation: {
+                type: 'string',
+                tooltip: 'Color for highlighted mentions in messages and input',
+            },
+            propertyHelp: {
+                tooltip:
+                    'Color used to highlight @mentions.\n\nExample: `#3b82f6`, `#8b5cf6`',
+            },
+            /* wwEditor:end */
+        },
+        mentionsBgColor: {
+            label: { en: 'Mentions Background' },
+            type: 'Color',
+            section: 'style',
+            bindable: true,
+            classes: true,
+            states: true,
+            responsive: true,
+            defaultValue: '#dbeafe',
+            /* wwEditor:start */
+            bindingValidation: {
+                type: 'string',
+                tooltip: 'Background color for highlighted mentions',
+            },
+            propertyHelp: {
+                tooltip:
+                    'Background color behind @mentions.\n\nExample: `#dbeafe`, `#e9d5ff`',
             },
             /* wwEditor:end */
         },

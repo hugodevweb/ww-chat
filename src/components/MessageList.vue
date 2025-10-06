@@ -36,6 +36,8 @@
                     :own-message-font-family="ownMessageFontFamily"
                     :own-message-border="ownMessageBorder"
                     :own-message-radius="ownMessageRadius"
+                    :mentions-color="mentionsColor"
+                    :mentions-bg-color="mentionsBgColor"
                     @attachment-click="handleAttachmentClick"
                     @right-click="handleRightClick"
                 />
@@ -142,6 +144,14 @@ export default {
         dateSeparatorBorderRadius: {
             type: String,
             default: '4px',
+        },
+        mentionsColor: {
+            type: String,
+            default: '#3b82f6',
+        },
+        mentionsBgColor: {
+            type: String,
+            default: '#dbeafe',
         },
     },
     emits: ['attachment-click', 'message-right-click'],

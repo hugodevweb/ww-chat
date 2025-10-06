@@ -81,7 +81,41 @@
                     :disabled="isUiDisabled"
                     :style="inputStyles"
                     @keydown.enter.prevent="onEnterPress"
+                    @input="handleInput"
+                    @keydown="handleKeyDown"
                 ></textarea>
+
+                <!-- Mentions dropdown -->
+                <div
+                    v-if="showMentionsDropdown"
+                    class="ww-chat-input-area__mentions-dropdown"
+                    :style="mentionsDropdownStyle"
+                >
+                    <div
+                        v-for="(participant, index) in filteredParticipants"
+                        :key="participant.id"
+                        class="ww-chat-input-area__mention-item"
+                        :class="{ 'ww-chat-input-area__mention-item--selected': index === selectedMentionIndex }"
+                        @click="selectMention(participant)"
+                        @mouseenter="selectedMentionIndex = index"
+                    >
+                        <div v-if="participant.avatar" class="ww-chat-input-area__mention-avatar">
+                            <img :src="participant.avatar" :alt="participant.name" />
+                        </div>
+                        <div v-else class="ww-chat-input-area__mention-avatar-initials">
+                            {{ getInitials(participant.name) }}
+                        </div>
+                        <div class="ww-chat-input-area__mention-info">
+                            <div class="ww-chat-input-area__mention-name">{{ participant.name }}</div>
+                            <div v-if="participant.location" class="ww-chat-input-area__mention-location">
+                                {{ participant.location }}
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="filteredParticipants.length === 0" class="ww-chat-input-area__mention-empty">
+                        No participants found
+                    </div>
+                </div>
             </div>
 
             <!-- Send button -->
@@ -110,6 +144,14 @@ export default {
     name: 'InputArea',
     props: {
         modelValue: {
+            type: String,
+            default: '',
+        },
+        participants: {
+            type: Array,
+            default: () => [],
+        },
+        currentUserId: {
             type: String,
             default: '',
         },
@@ -228,6 +270,14 @@ export default {
             type: String,
             default: '12px',
         },
+        mentionsColor: {
+            type: String,
+            default: '#3b82f6',
+        },
+        mentionsBgColor: {
+            type: String,
+            default: '#dbeafe',
+        },
     },
     emits: ['update:modelValue', 'send', 'attachment', 'remove-attachment', 'pending-attachment-click'],
     setup(props, { emit }) {
@@ -240,6 +290,13 @@ export default {
         const sendIconText = ref(null);
         const attachmentIconText = ref(null);
         const removeIconText = ref(null);
+
+        // Mentions state
+        const showMentionsDropdown = ref(false);
+        const mentionSearchText = ref('');
+        const mentionStartPos = ref(-1);
+        const selectedMentionIndex = ref(0);
+        const mentions = ref([]);
 
         const { getIcon } = wwLib.useIcons();
 
@@ -381,6 +438,11 @@ export default {
         const onEnterPress = event => {
             if (isEditing.value) return;
 
+            // If mentions dropdown is open, don't send message
+            if (showMentionsDropdown.value) {
+                return;
+            }
+
             if (!event.shiftKey && canSend.value && !props.isDisabled) {
                 sendMessage();
             }
@@ -390,8 +452,147 @@ export default {
         const sendMessage = () => {
             if (isEditing.value || !canSend.value || props.isDisabled) return;
 
-            emit('send');
+            emit('send', mentions.value);
             inputValue.value = '';
+            mentions.value = [];
+            showMentionsDropdown.value = false;
+        };
+
+        // Mentions functionality
+        const availableParticipants = computed(() => {
+            // Filter out current user and already mentioned users
+            const mentionedIds = mentions.value.map(m => m.id);
+            return (props.participants || []).filter(p => 
+                p?.id !== props.currentUserId && !mentionedIds.includes(p.id)
+            );
+        });
+
+        const filteredParticipants = computed(() => {
+            if (!mentionSearchText.value) return availableParticipants.value;
+            
+            const search = mentionSearchText.value.toLowerCase();
+            return availableParticipants.value.filter(p => 
+                p?.name?.toLowerCase().includes(search)
+            );
+        });
+
+        const mentionsDropdownStyle = computed(() => ({
+            bottom: '100%',
+            marginBottom: '8px',
+        }));
+
+        const getInitials = (name) => {
+            if (!name) return '?';
+            return name
+                .split(' ')
+                .map(part => part.charAt(0))
+                .join('')
+                .toUpperCase()
+                .slice(0, 2);
+        };
+
+        const handleInput = (event) => {
+            const textarea = textareaRef.value;
+            if (!textarea) return;
+
+            const cursorPos = textarea.selectionStart;
+            const text = inputValue.value || '';
+
+            // Check if we're typing after an @ symbol
+            const textBeforeCursor = text.substring(0, cursorPos);
+            const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+            if (lastAtIndex !== -1) {
+                // Check if there's any whitespace between @ and cursor
+                const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
+                if (!/\s/.test(textAfterAt)) {
+                    // We're in mention mode
+                    mentionStartPos.value = lastAtIndex;
+                    mentionSearchText.value = textAfterAt;
+                    showMentionsDropdown.value = true;
+                    selectedMentionIndex.value = 0;
+                    return;
+                }
+            }
+
+            // Not in mention mode
+            showMentionsDropdown.value = false;
+            mentionSearchText.value = '';
+            mentionStartPos.value = -1;
+
+            // Check if any mentions were removed from the text
+            checkRemovedMentions();
+        };
+
+        const checkRemovedMentions = () => {
+            const text = inputValue.value || '';
+            
+            // Filter out mentions whose text is no longer in the input
+            mentions.value = mentions.value.filter(mention => {
+                const mentionText = `@${mention.name}`;
+                return text.includes(mentionText);
+            });
+        };
+
+        const handleKeyDown = (event) => {
+            if (!showMentionsDropdown.value) return;
+
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                selectedMentionIndex.value = Math.min(
+                    selectedMentionIndex.value + 1,
+                    filteredParticipants.value.length - 1
+                );
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                selectedMentionIndex.value = Math.max(selectedMentionIndex.value - 1, 0);
+            } else if (event.key === 'Enter' || event.key === 'Tab') {
+                if (filteredParticipants.value.length > 0) {
+                    event.preventDefault();
+                    selectMention(filteredParticipants.value[selectedMentionIndex.value]);
+                }
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                showMentionsDropdown.value = false;
+                mentionSearchText.value = '';
+                mentionStartPos.value = -1;
+            }
+        };
+
+        const selectMention = (participant) => {
+            if (!participant || mentionStartPos.value === -1) return;
+
+            const textarea = textareaRef.value;
+            if (!textarea) return;
+
+            const text = inputValue.value || '';
+            const before = text.substring(0, mentionStartPos.value);
+            const after = text.substring(textarea.selectionStart);
+            
+            const mentionText = `@${participant.name}`;
+            inputValue.value = before + mentionText + ' ' + after;
+
+            // Add to mentions array (check by ID to avoid duplicates)
+            const existingMention = mentions.value.find(m => m.id === participant.id);
+            if (!existingMention) {
+                mentions.value.push({
+                    id: participant.id,
+                    name: participant.name,
+                    avatar: participant.avatar || '',
+                });
+            }
+
+            // Reset mention state
+            showMentionsDropdown.value = false;
+            mentionSearchText.value = '';
+            mentionStartPos.value = -1;
+
+            // Set cursor position after the mention
+            nextTick(() => {
+                const newCursorPos = before.length + mentionText.length + 1;
+                textarea.setSelectionRange(newCursorPos, newCursorPos);
+                textarea.focus();
+            });
         };
 
         const handleAttachment = event => {
@@ -463,6 +664,16 @@ export default {
             handleAttachment,
             removeAttachment,
             onPendingAttachmentClick,
+
+            // Mentions
+            showMentionsDropdown,
+            filteredParticipants,
+            selectedMentionIndex,
+            mentionsDropdownStyle,
+            getInitials,
+            handleInput,
+            handleKeyDown,
+            selectMention,
         };
     },
 };
@@ -739,6 +950,98 @@ export default {
             color: #94a3b8;
             box-shadow: none;
         }
+    }
+
+    &__mentions-dropdown {
+        position: absolute;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        max-height: 240px;
+        overflow-y: auto;
+        z-index: 1000;
+        padding: 4px;
+    }
+
+    &__mention-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+
+        &:hover,
+        &--selected {
+            background-color: #f1f5f9;
+        }
+
+        &:active {
+            background-color: #e2e8f0;
+        }
+    }
+
+    &__mention-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        overflow: hidden;
+        flex-shrink: 0;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    }
+
+    &__mention-avatar-initials {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    &__mention-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__mention-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #334155;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__mention-location {
+        font-size: 12px;
+        color: #64748b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 2px;
+    }
+
+    &__mention-empty {
+        padding: 16px;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 14px;
+        font-style: italic;
     }
 }
 </style>

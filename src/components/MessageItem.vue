@@ -24,9 +24,7 @@
             </div>
 
             <!-- Message text -->
-            <div class="ww-message-item__text">
-                {{ message.text }}
-            </div>
+            <div class="ww-message-item__text" v-html="highlightedMessageText"></div>
 
             <!-- Attachments if any -->
             <div v-if="formattedAttachments.length" class="ww-message-item__attachments">
@@ -166,6 +164,14 @@ export default {
             type: String,
             default: '18px 18px 18px 18px',
         },
+        mentionsColor: {
+            type: String,
+            default: '#3b82f6',
+        },
+        mentionsBgColor: {
+            type: String,
+            default: '#dbeafe',
+        },
     },
     emits: ['attachment-click', 'right-click'],
     setup(props, { emit }) {
@@ -266,6 +272,96 @@ export default {
             });
         };
 
+        const highlightedMessageText = computed(() => {
+            const text = props.message?.text || '';
+            if (!text) return '';
+            
+            // Get mentions from message data if available
+            const mentions = props.message?.mentions || [];
+            
+            // If we have mentions data, use it for precise highlighting
+            if (mentions.length > 0) {
+                // Find all mention positions in the text
+                const mentionOccurrences = [];
+                
+                mentions.forEach(mention => {
+                    const mentionPattern = `@${mention.name}`;
+                    let index = text.indexOf(mentionPattern);
+                    
+                    while (index !== -1) {
+                        mentionOccurrences.push({
+                            start: index,
+                            end: index + mentionPattern.length,
+                            text: mentionPattern,
+                            mention: mention
+                        });
+                        index = text.indexOf(mentionPattern, index + 1);
+                    }
+                });
+                
+                // Sort by position (earliest first)
+                mentionOccurrences.sort((a, b) => a.start - b.start);
+                
+                // Build the result string
+                const parts = [];
+                let lastIndex = 0;
+                
+                mentionOccurrences.forEach(occurrence => {
+                    // Add text before this mention (escape HTML)
+                    if (occurrence.start > lastIndex) {
+                        const beforeText = text.substring(lastIndex, occurrence.start);
+                        parts.push(beforeText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+                    }
+                    
+                    // Add the highlighted mention
+                    const escapedMention = occurrence.text
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;');
+                    
+                    parts.push(`<span class="ww-message-item__mention" style="background-color: ${props.mentionsBgColor}; color: ${props.mentionsColor};">${escapedMention}</span>`);
+                    
+                    lastIndex = occurrence.end;
+                });
+                
+                // Add remaining text after last mention (escape HTML)
+                if (lastIndex < text.length) {
+                    const remainingText = text.substring(lastIndex);
+                    parts.push(remainingText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+                }
+                
+                return parts.join('');
+            }
+            
+            // Fallback: use regex for generic @mention detection (up to 2 words)
+            const mentionRegex = /@([a-zA-Z0-9_]+(?:\s+[a-zA-Z0-9_]+)?)(?=\s+[a-z]|\s*[,.:;!?)\n]|$)/g;
+            const parts = [];
+            let lastIndex = 0;
+            let match;
+            
+            while ((match = mentionRegex.exec(text)) !== null) {
+                // Add text before the mention (escape HTML)
+                if (match.index > lastIndex) {
+                    const beforeText = text.substring(lastIndex, match.index);
+                    parts.push(beforeText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+                }
+                
+                // Add the mention with styling (escape the mention text)
+                const mentionText = match[0].replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                parts.push(`<span class="ww-message-item__mention" style="background-color: ${props.mentionsBgColor}; color: ${props.mentionsColor};">${mentionText}</span>`);
+                
+                lastIndex = match.index + match[0].length;
+            }
+            
+            // Add remaining text after last mention (escape HTML)
+            if (lastIndex < text.length) {
+                const remainingText = text.substring(lastIndex);
+                parts.push(remainingText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+            }
+            
+            return parts.join('');
+        });
+
         return {
             messageStyles,
             isImageFile,
@@ -274,6 +370,7 @@ export default {
             formatMessageTime,
             handleAttachmentClick,
             handleRightClick,
+            highlightedMessageText,
         };
     },
 };
@@ -322,6 +419,13 @@ export default {
     &__text {
         line-height: 1.4;
         word-break: break-word;
+
+        :deep(.ww-message-item__mention) {
+            border-radius: 4px;
+            padding: 2px 4px;
+            font-weight: 600;
+            display: inline;
+        }
     }
 
     &__time {

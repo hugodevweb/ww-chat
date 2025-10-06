@@ -48,6 +48,8 @@
                 :date-separator-line-color="dateSeparatorLineColor"
                 :date-separator-bg-color="dateSeparatorBgColor"
                 :date-separator-border-radius="dateSeparatorBorderRadius"
+                :mentions-color="mentionsColor"
+                :mentions-bg-color="mentionsBgColor"
                 @attachment-click="handleAttachmentClick"
                 @message-right-click="handleMessageRightClick"
             />
@@ -59,6 +61,8 @@
             :is-disabled="isDisabled"
             :allow-attachments="allowAttachments"
             :pending-attachments="pendingAttachments"
+            :participants="participants"
+            :current-user-id="currentUserId"
             :input-bg-color="inputBgColor"
             :input-text-color="inputTextColor"
             :input-font-size="inputFontSize"
@@ -82,6 +86,8 @@
             :remove-icon="removeIcon"
             :remove-icon-color="removeIconColor"
             :remove-icon-size="removeIconSize"
+            :mentions-color="mentionsColor"
+            :mentions-bg-color="mentionsBgColor"
             :send-button-bg-color="sendButtonBgColor"
             :send-button-hover-bg-color="sendButtonHoverBgColor"
             :send-button-border="sendButtonBorder"
@@ -302,6 +308,7 @@ export default {
                         status: '',
                         timestamp: '',
                         attachments: [],
+                        mentions: [],
                         userSettings: {},
                         _originalData: message,
                     };
@@ -351,6 +358,7 @@ export default {
                         resolveMapping(message, props.content?.mappingTimestamp, 'timestamp') ||
                         new Date().toISOString(),
                     attachments,
+                    mentions: message.mentions || [],
                     userSettings: userSettings,
                     _originalData: message,
                 };
@@ -462,7 +470,9 @@ export default {
             }
         };
 
-        const sendMessage = () => {
+        const currentMentions = ref([]);
+
+        const sendMessage = (mentions = []) => {
             if (isEditing.value || isDisabled.value || (!newMessage.value.trim() && pendingAttachments.value.length === 0)) return;
 
             const attachments = [...pendingAttachments.value];
@@ -481,6 +491,7 @@ export default {
                 timestamp: new Date().toISOString(),
                 // Emit attachments as File[] only, without id/url/name duplication
                 attachments: attachmentsForEvent.length > 0 ? attachmentsForEvent : undefined,
+                mentions: mentions.length > 0 ? mentions : undefined,
                 userSettings: currentUserParticipant.value
                     ? {
                           userName: currentUserParticipant.value.name,
@@ -492,6 +503,7 @@ export default {
             };
 
             newMessage.value = '';
+            currentMentions.value = [];
 
             emit('trigger-event', {
                 name: 'messageSent',
@@ -1027,6 +1039,10 @@ export default {
             removeIcon: computed(() => props.content?.removeIcon || 'x'),
             removeIconColor: computed(() => props.content?.removeIconColor || '#f43f5e'),
             removeIconSize: computed(() => props.content?.removeIconSize || '12px'),
+
+            // Mentions
+            mentionsColor: computed(() => props.content?.mentionsColor || '#3b82f6'),
+            mentionsBgColor: computed(() => props.content?.mentionsBgColor || '#dbeafe'),
 
             // Input action alignment and button styles
             actionAlign: computed(() => props.content?.inputActionAlign || 'end'),
