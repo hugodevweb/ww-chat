@@ -80,7 +80,7 @@
                     :placeholder="placeholder"
                     :disabled="isUiDisabled"
                     :style="inputStyles"
-                    @keydown.enter.prevent="onEnterPress"
+                    @keydown.enter="onEnterPress"
                     @input="handleInput"
                     @keydown="handleKeyDown"
                 ></textarea>
@@ -436,17 +436,27 @@ export default {
         };
 
         const onEnterPress = event => {
-            if (isEditing.value) return;
-
-            // If mentions dropdown is open, don't send message
-            if (showMentionsDropdown.value) {
+            if (isEditing.value) {
+                event.preventDefault();
                 return;
             }
 
-            if (!event.shiftKey && canSend.value && !props.isDisabled) {
+            // If mentions dropdown is open, don't send message
+            if (showMentionsDropdown.value) {
+                event.preventDefault();
+                return;
+            }
+
+            // If Shift+Enter, allow default behavior (new line)
+            if (event.shiftKey) {
+                return;
+            }
+
+            // Otherwise, send message if conditions are met
+            if (canSend.value && !props.isDisabled) {
+                event.preventDefault();
                 sendMessage();
             }
-            // Note: Shift+Enter still works for new lines, just without resizing
         };
 
         const sendMessage = () => {
