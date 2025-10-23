@@ -272,6 +272,15 @@ export default {
             });
         };
 
+        // Helper function to escape HTML and convert newlines to <br>
+        const escapeHtmlAndConvertNewlines = (str) => {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\n/g, '<br>');
+        };
+
         const highlightedMessageText = computed(() => {
             const text = props.message?.text || '';
             if (!text) return '';
@@ -307,13 +316,13 @@ export default {
                 let lastIndex = 0;
                 
                 mentionOccurrences.forEach(occurrence => {
-                    // Add text before this mention (escape HTML)
+                    // Add text before this mention (escape HTML and convert newlines)
                     if (occurrence.start > lastIndex) {
                         const beforeText = text.substring(lastIndex, occurrence.start);
-                        parts.push(beforeText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+                        parts.push(escapeHtmlAndConvertNewlines(beforeText));
                     }
                     
-                    // Add the highlighted mention
+                    // Add the highlighted mention (don't convert newlines in mentions)
                     const escapedMention = occurrence.text
                         .replace(/&/g, '&amp;')
                         .replace(/</g, '&lt;')
@@ -324,10 +333,10 @@ export default {
                     lastIndex = occurrence.end;
                 });
                 
-                // Add remaining text after last mention (escape HTML)
+                // Add remaining text after last mention (escape HTML and convert newlines)
                 if (lastIndex < text.length) {
                     const remainingText = text.substring(lastIndex);
-                    parts.push(remainingText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+                    parts.push(escapeHtmlAndConvertNewlines(remainingText));
                 }
                 
                 return parts.join('');
@@ -340,23 +349,26 @@ export default {
             let match;
             
             while ((match = mentionRegex.exec(text)) !== null) {
-                // Add text before the mention (escape HTML)
+                // Add text before the mention (escape HTML and convert newlines)
                 if (match.index > lastIndex) {
                     const beforeText = text.substring(lastIndex, match.index);
-                    parts.push(beforeText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+                    parts.push(escapeHtmlAndConvertNewlines(beforeText));
                 }
                 
-                // Add the mention with styling (escape the mention text)
-                const mentionText = match[0].replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                // Add the mention with styling (escape the mention text, don't convert newlines)
+                const mentionText = match[0]
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
                 parts.push(`<span class="ww-message-item__mention" style="background-color: ${props.mentionsBgColor}; color: ${props.mentionsColor};">${mentionText}</span>`);
                 
                 lastIndex = match.index + match[0].length;
             }
             
-            // Add remaining text after last mention (escape HTML)
+            // Add remaining text after last mention (escape HTML and convert newlines)
             if (lastIndex < text.length) {
                 const remainingText = text.substring(lastIndex);
-                parts.push(remainingText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+                parts.push(escapeHtmlAndConvertNewlines(remainingText));
             }
             
             return parts.join('');
