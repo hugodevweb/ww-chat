@@ -28,6 +28,7 @@
             <MessageList
                 :messages="messages"
                 :current-user-id="currentUserId"
+                :is-loading="isLoading"
                 :message-bg-color="messageBgColor"
                 :message-text-color="messageTextColor"
                 :message-font-size="messageFontSize"
@@ -369,6 +370,7 @@ export default {
         const displayHeader = computed(() => props.content?.displayHeader !== false);
         const allowAttachments = computed(() => props.content?.allowAttachments || false);
         const inputPlaceholder = computed(() => props.content?.inputPlaceholder || 'Type a message...');
+        const isLoading = computed(() => props.content?.isLoading || false);
 
         // User properties - use direct props since we no longer have global user settings
         const currentUserParticipant = computed(() => participants.value.find(p => p.isCurrentUser));
@@ -968,6 +970,7 @@ export default {
             currentUserId,
             participants,
             isDisabled,
+            isLoading,
             displayHeader,
             allowAttachments,
             inputPlaceholder,

@@ -1,10 +1,55 @@
 <template>
     <div class="ww-message-list">
-        <div v-if="messages.length === 0" class="ww-message-list__empty">
+        <!-- Loading Skeleton -->
+        <div v-if="isLoading" class="ww-message-list__skeleton">
+            <!-- Date separator skeleton -->
+            <div class="ww-message-list__skeleton-date" :style="dateSeparatorStyle">
+                <span class="ww-message-list__skeleton-date-text"></span>
+            </div>
+
+            <!-- Other user message - short -->
+            <div class="ww-message-list__skeleton-message ww-message-list__skeleton-message--other">
+                <div class="ww-message-list__skeleton-bubble ww-message-list__skeleton-bubble--other ww-message-list__skeleton-bubble--short" :style="skeletonOtherStyle"></div>
+            </div>
+
+            <!-- Other user message - medium -->
+            <div class="ww-message-list__skeleton-message ww-message-list__skeleton-message--other">
+                <div class="ww-message-list__skeleton-bubble ww-message-list__skeleton-bubble--other ww-message-list__skeleton-bubble--medium" :style="skeletonOtherStyle"></div>
+            </div>
+
+            <!-- Own message - long -->
+            <div class="ww-message-list__skeleton-message ww-message-list__skeleton-message--own">
+                <div class="ww-message-list__skeleton-bubble ww-message-list__skeleton-bubble--own ww-message-list__skeleton-bubble--long" :style="skeletonOwnStyle"></div>
+            </div>
+
+            <!-- Other user message - medium -->
+            <div class="ww-message-list__skeleton-message ww-message-list__skeleton-message--other">
+                <div class="ww-message-list__skeleton-bubble ww-message-list__skeleton-bubble--other ww-message-list__skeleton-bubble--medium" :style="skeletonOtherStyle"></div>
+            </div>
+
+            <!-- Own message - short -->
+            <div class="ww-message-list__skeleton-message ww-message-list__skeleton-message--own">
+                <div class="ww-message-list__skeleton-bubble ww-message-list__skeleton-bubble--own ww-message-list__skeleton-bubble--short" :style="skeletonOwnStyle"></div>
+            </div>
+
+            <!-- Other user message - long -->
+            <div class="ww-message-list__skeleton-message ww-message-list__skeleton-message--other">
+                <div class="ww-message-list__skeleton-bubble ww-message-list__skeleton-bubble--other ww-message-list__skeleton-bubble--long" :style="skeletonOtherStyle"></div>
+            </div>
+
+            <!-- Own message - medium -->
+            <div class="ww-message-list__skeleton-message ww-message-list__skeleton-message--own">
+                <div class="ww-message-list__skeleton-bubble ww-message-list__skeleton-bubble--own ww-message-list__skeleton-bubble--medium" :style="skeletonOwnStyle"></div>
+            </div>
+        </div>
+
+        <!-- Empty state -->
+        <div v-else-if="messages.length === 0" class="ww-message-list__empty">
             <div class="ww-message-list__empty-message" :style="emptyMessageStyle">{{ emptyMessageText }}</div>
         </div>
 
-        <transition-group name="message-transition" tag="div">
+        <!-- Messages -->
+        <transition-group v-else name="message-transition" tag="div">
             <div v-for="(message, index) in groupedMessages" :key="message.key">
                 <!-- Date separator -->
                 <div
@@ -64,6 +109,10 @@ export default {
         currentUserId: {
             type: String,
             required: true,
+        },
+        isLoading: {
+            type: Boolean,
+            default: false,
         },
         messageBgColor: {
             type: String,
@@ -177,6 +226,18 @@ export default {
             '--date-separator-border-radius': props.dateSeparatorBorderRadius,
         }));
 
+        const skeletonOtherStyle = computed(() => ({
+            '--skeleton-bg': props.messageBgColor,
+            '--skeleton-border': props.messageBorder,
+            '--skeleton-radius': props.messageRadius,
+        }));
+
+        const skeletonOwnStyle = computed(() => ({
+            '--skeleton-bg': props.ownMessageBgColor,
+            '--skeleton-border': props.ownMessageBorder,
+            '--skeleton-radius': props.ownMessageRadius,
+        }));
+
         const groupedMessages = computed(() => {
             if (!props.messages || props.messages.length === 0) return [];
 
@@ -268,6 +329,8 @@ export default {
             handleRightClick,
             emptyMessageStyle,
             dateSeparatorStyle,
+            skeletonOtherStyle,
+            skeletonOwnStyle,
             dateTimeOptions,
         };
     },
@@ -313,6 +376,115 @@ export default {
             color: var(--date-separator-text-color, #64748b);
             background-color: var(--date-separator-bg-color, #ffffff);
             border-radius: var(--date-separator-border-radius, 4px);
+        }
+    }
+
+    // Skeleton styles
+    &__skeleton {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    &__skeleton-date {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 16px 0;
+        position: relative;
+
+        &::before,
+        &::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background-color: var(--date-separator-line-color, #e2e8f0);
+        }
+    }
+
+    &__skeleton-date-text {
+        display: inline-block;
+        width: 80px;
+        height: 16px;
+        margin: 0 12px;
+        background: linear-gradient(90deg, var(--date-separator-bg-color, #f1f5f9) 25%, #e2e8f0 50%, var(--date-separator-bg-color, #f1f5f9) 75%);
+        background-size: 200% 100%;
+        animation: skeleton-shimmer 1.5s infinite;
+        border-radius: var(--date-separator-border-radius, 4px);
+    }
+
+    &__skeleton-message {
+        display: flex;
+        margin-bottom: 4px;
+
+        &--own {
+            justify-content: flex-end;
+        }
+
+        &--other {
+            justify-content: flex-start;
+        }
+    }
+
+    &__skeleton-bubble {
+        padding: 10px 12px;
+        position: relative;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        background: var(--skeleton-bg, #f1f5f9);
+        border: var(--skeleton-border, 1px solid #e2e8f0);
+        border-radius: var(--skeleton-radius, 18px);
+        overflow: hidden;
+
+        &::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent 25%, rgba(255, 255, 255, 0.4) 50%, transparent 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.5s infinite;
+        }
+
+        &--short {
+            width: 80px;
+            height: 36px;
+        }
+
+        &--medium {
+            width: 160px;
+            height: 36px;
+        }
+
+        &--long {
+            width: 220px;
+            height: 52px;
+        }
+
+        &--other {
+            margin-top: 8px;
+
+            &:first-child {
+                margin-top: 0;
+            }
+        }
+
+        &--own {
+            margin-top: 8px;
+
+            &:first-child {
+                margin-top: 0;
+            }
+        }
+    }
+
+    @keyframes skeleton-shimmer {
+        0% {
+            background-position: 200% 0;
+        }
+        100% {
+            background-position: -200% 0;
         }
     }
 }

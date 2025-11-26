@@ -163,7 +163,7 @@ export default {
         ],
         customSettingsPropertiesOrder: [
             // Chat settings
-            ['chatSettingsTitle', 'groupChatText', 'groupChatAvatar', 'allowAttachments', 'disabled', 'autoScrollBehavior'],
+            ['chatSettingsTitle', 'groupChatText', 'groupChatAvatar', 'allowAttachments', 'disabled', 'autoScrollBehavior', 'isLoading'],
             // Chat data + message mapping
             [
                 'chatDataTitle',
@@ -2132,6 +2132,23 @@ export default {
             propertyHelp: {
                 tooltip:
                     'Scroll behavior when scrolling to new messages.\n\nPossible values: `smooth`, `auto`',
+            },
+            /* wwEditor:end */
+        },
+        isLoading: {
+            label: { en: 'Loading' },
+            type: 'OnOff',
+            section: 'settings',
+            bindable: true,
+            defaultValue: false,
+            /* wwEditor:start */
+            bindingValidation: {
+                type: 'boolean',
+                tooltip: 'Whether the chat is in loading state',
+            },
+            propertyHelp: {
+                tooltip:
+                    'When enabled, displays a skeleton loading animation instead of messages.\n\nPossible values: `true`, `false`',
             },
             /* wwEditor:end */
         },

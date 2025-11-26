@@ -17,6 +17,7 @@ Unified chat UI: optional header (via `displayHeader`), always-present messages 
 - allowAttachments: boolean – Enable file attachments. Example: true
 - disabled: boolean – Disable input/actions. Example: false
 - autoScrollBehavior: 'auto'|'smooth' – Scroll mode for new messages. Example: 'auto'
+- isLoading: boolean – Show loading skeleton instead of messages. Example: false
 - groupChatAvatar: string – URL for a custom group chat avatar image. Example: 'https://.../group.png'
 
 - headerBgColor: string – Header background. Example: '#ffffff'
