@@ -456,6 +456,17 @@ export default {
             { deep: true }
         );
 
+        // Auto-scroll when loading finishes
+        watch(
+            isLoading,
+            (newValue, oldValue) => {
+                // When isLoading changes from true to false, scroll to bottom
+                if (oldValue === true && newValue === false) {
+                    scrollToBottom();
+                }
+            }
+        );
+
         // Removed user settings watcher and debounced updater; participants now drive user info
 
         const scrollToBottom = async (smooth = null) => {
