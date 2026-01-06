@@ -423,16 +423,28 @@ export default {
             () => props.modelValue,
             newValue => {
                 inputValue.value = newValue;
+                // Resize when value changes programmatically
+                nextTick(() => resizeTextarea());
             }
         );
 
         watch(inputValue, newValue => {
             emit('update:modelValue', newValue);
         });
+        
+        // Resize textarea on mount
+        onMounted(() => {
+            nextTick(() => resizeTextarea());
+        });
 
         const resizeTextarea = () => {
-            // No longer needed since we use fixed height
-            // The textarea will maintain its fixed height
+            const textarea = textareaRef.value;
+            if (!textarea) return;
+            
+            // Reset height to auto to get accurate scrollHeight
+            textarea.style.height = 'auto';
+            // Set height to scrollHeight (content height)
+            textarea.style.height = textarea.scrollHeight + 'px';
         };
 
         const onEnterPress = event => {
@@ -466,6 +478,9 @@ export default {
             inputValue.value = '';
             mentions.value = [];
             showMentionsDropdown.value = false;
+            
+            // Reset textarea height after clearing
+            nextTick(() => resizeTextarea());
         };
 
         // Mentions functionality
@@ -521,6 +536,8 @@ export default {
                     mentionSearchText.value = textAfterAt;
                     showMentionsDropdown.value = true;
                     selectedMentionIndex.value = 0;
+                    // Still resize textarea even in mention mode
+                    nextTick(() => resizeTextarea());
                     return;
                 }
             }
@@ -532,6 +549,9 @@ export default {
 
             // Check if any mentions were removed from the text
             checkRemovedMentions();
+            
+            // Resize textarea to fit content
+            nextTick(() => resizeTextarea());
         };
 
         const checkRemovedMentions = () => {
@@ -656,7 +676,7 @@ export default {
                 backgroundColor: props.inputBgColor,
                 color: props.inputTextColor,
                 '--placeholder-color': props.inputPlaceholderColor,
-                height: props.inputHeight,
+                minHeight: props.inputHeight,
                 borderRadius: props.inputBorderRadius,
                 '--textarea-border': props.textareaBorder,
                 '--textarea-border-hover': props.textareaBorderHover,
@@ -878,18 +898,18 @@ export default {
     &__input {
         width: 100%;
         resize: none;
-        height: v-bind('inputHeight');
-        /* Center a single text line vertically based on height and line-height */
-        padding: calc((v-bind('inputHeight') - 1.5em) / 2) 16px;
+        min-height: v-bind('inputHeight');
+        max-height: 30vh;
+        /* Padding for comfortable text input */
+        padding: 8px 16px;
         border-radius: v-bind('inputBorderRadius');
         font-size: v-bind('inputFontSize');
         font-weight: v-bind('inputFontWeight');
         font-family: v-bind('inputFontFamily');
         line-height: 1.5;
         overflow-y: auto;
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* IE/Edge */
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        scrollbar-width: thin; /* Firefox */
+        transition: border 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         background-color: v-bind('inputBgColor');
         color: v-bind('inputTextColor');
         border: var(--textarea-border);
@@ -899,8 +919,20 @@ export default {
         margin: 0;
 
         &::-webkit-scrollbar {
-            width: 0;
-            height: 0;
+            width: 6px;
+        }
+
+        &::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+
+        &::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(0, 0, 0, 0.3);
         }
 
         &::placeholder {
