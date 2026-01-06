@@ -5,8 +5,33 @@
             'ww-message-item--own': isOwnMessage,
             'ww-message-item--continued': sameSenderAsPrevious,
             'ww-message-item--continue-next': sameSenderAsNext,
+            'ww-message-item--has-avatar': !isOwnMessage && !sameSenderAsPrevious,
         }"
     >
+        <!-- Avatar for other users (only shown on first message in group) -->
+        <div 
+            v-if="!isOwnMessage && !sameSenderAsPrevious" 
+            class="ww-message-item__avatar"
+        >
+            <img 
+                v-if="message.avatar" 
+                :src="message.avatar" 
+                :alt="message.userName"
+                class="ww-message-item__avatar-img"
+            />
+            <span 
+                v-else 
+                class="ww-message-item__avatar-initials"
+            >
+                {{ userInitials }}
+            </span>
+        </div>
+        <!-- Avatar spacer for continued messages (keeps alignment) -->
+        <div 
+            v-else-if="!isOwnMessage && sameSenderAsPrevious" 
+            class="ww-message-item__avatar-spacer"
+        ></div>
+
         <!-- Message content -->
         <div
             class="ww-message-item__content"
@@ -374,6 +399,18 @@ export default {
             return parts.join('');
         });
 
+        // Compute initials for avatar fallback
+        const userInitials = computed(() => {
+            const name = props.message?.userName || '';
+            if (!name) return '?';
+            
+            const words = name.trim().split(/\s+/);
+            if (words.length === 1) {
+                return words[0].charAt(0).toUpperCase();
+            }
+            return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+        });
+
         return {
             messageStyles,
             isImageFile,
@@ -383,6 +420,7 @@ export default {
             handleAttachmentClick,
             handleRightClick,
             highlightedMessageText,
+            userInitials,
         };
     },
 };
@@ -392,9 +430,43 @@ export default {
 .ww-message-item {
     display: flex;
     margin-bottom: 4px;
+    align-items: flex-start;
 
     &--own {
         justify-content: flex-end;
+    }
+
+    &__avatar {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        border-radius: 50%;
+        margin-right: 8px;
+        margin-top: 8px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #e2e8f0;
+    }
+
+    &__avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    &__avatar-initials {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+    }
+
+    &__avatar-spacer {
+        width: 32px;
+        min-width: 32px;
+        margin-right: 8px;
     }
 
     &__content {
@@ -415,6 +487,12 @@ export default {
         .ww-message-item--continue-next & {
             margin-bottom: 2px;
         }
+    }
+
+    // Adjust max-width when avatar is present
+    &--has-avatar &__content,
+    &:not(&--own) &__content {
+        max-width: calc(70% - 40px);
     }
 
     &__sender {
