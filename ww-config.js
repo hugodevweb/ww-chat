@@ -175,6 +175,7 @@ export default {
                 'mappingTimestamp',
                 'mappingAttachments',
                 'mappingMessageReplyId',
+                'mappingLastModifiedAt',
                 // Attachments Data mapping (visible only when mappingAttachments is bound)
                 'attachmentsDataTitle',
                 'mappingAttachmentId',
@@ -2546,6 +2547,29 @@ export default {
             propertyHelp: {
                 tooltip:
                     'Mapping to the reply-to message ID in your `Messages` data.\n\nExample mapping: `context.mapping?.["replyToMessageId"]`\nExample value: `msg-1`',
+            },
+            /* wwEditor:end */
+            hidden: (content, _, boundProps) => !boundProps.messages,
+        },
+        mappingLastModifiedAt: {
+            label: { en: 'Last Modified At' },
+            type: 'Formula',
+            options: content => ({
+                template: Array.isArray(content.messages) && content.messages.length ? content.messages[0] : null,
+            }),
+            defaultValue: {
+                type: 'f',
+                code: "context.mapping?.['lastModifiedAt'] ?? context.mapping?.['updatedAt'] ?? context.mapping?.['modifiedAt']",
+            },
+            section: 'settings',
+            /* wwEditor:start */
+            bindingValidation: {
+                type: 'formula',
+                tooltip: 'Formula to extract the last modified timestamp from each message object',
+            },
+            propertyHelp: {
+                tooltip:
+                    'Mapping to the last modified timestamp in your `Messages` data. When different from the created timestamp, displays "modifié" indicator.\n\nExample mapping: `context.mapping?.["lastModifiedAt"]`\nExample value: `2025-06-01T12:30:00Z`',
             },
             /* wwEditor:end */
             hidden: (content, _, boundProps) => !boundProps.messages,

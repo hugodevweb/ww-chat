@@ -383,6 +383,9 @@ export default {
 
                 // Map replyToMessageId
                 const replyToMessageId = resolveMapping(message, props.content?.mappingMessageReplyId, 'replyToMessageId') || null;
+                
+                // Map lastModifiedAt
+                const lastModifiedAt = resolveMapping(message, props.content?.mappingLastModifiedAt, 'lastModifiedAt') || null;
 
                 return {
                     id:
@@ -397,6 +400,7 @@ export default {
                     timestamp:
                         resolveMapping(message, props.content?.mappingTimestamp, 'timestamp') ||
                         new Date().toISOString(),
+                    lastModifiedAt,
                     replyToMessageId,
                     attachments,
                     mentions: message.mentions || [],

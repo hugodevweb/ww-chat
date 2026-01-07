@@ -41,6 +41,19 @@ export function formatTime(timestamp, options = {}) {
     return format(date, options.timeFormat || 'h:mm a', { locale });
 }
 
+export function formatDateTime(timestamp, options = {}) {
+    if (!timestamp) return '';
+
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+    const locale = options.locale || enUS;
+
+    if (isNaN(date.getTime())) return '';
+
+    // Format: "1 jan. 2025 à 14:30" style
+    const dateFormat = options.dateTimeFormat || "d MMM yyyy 'à' HH:mm";
+    return format(date, dateFormat, { locale });
+}
+
 function isSameDay(date1, date2) {
     return (
         date1.getFullYear() === date2.getFullYear() &&

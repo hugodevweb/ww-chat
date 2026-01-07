@@ -115,9 +115,19 @@
                 </div>
             </div>
 
-            <!-- Message timestamp -->
-            <div class="ww-message-item__time">
-                {{ formatMessageTime(message.timestamp) }}
+            <!-- Message timestamp and modified indicator -->
+            <div class="ww-message-item__footer">
+                <span 
+                    v-if="isModified" 
+                    class="ww-message-item__modified"
+                    :title="modifiedTooltip"
+                >
+                    modifié
+                </span>
+                <span v-if="isModified" class="ww-message-item__footer-separator">·</span>
+                <span class="ww-message-item__time">
+                    {{ formatMessageTime(message.timestamp) }}
+                </span>
             </div>
         </div>
     </div>
@@ -125,7 +135,7 @@
 
 <script>
 import { computed, inject } from 'vue';
-import { formatTime } from '../utils/dateTimeFormatter';
+import { formatTime, formatDateTime } from '../utils/dateTimeFormatter';
 
 export default {
     name: 'MessageItem',
@@ -447,6 +457,27 @@ export default {
             return text.slice(0, maxLength) + '...';
         };
 
+        // Check if message was modified (lastModifiedAt differs from timestamp)
+        const isModified = computed(() => {
+            const { timestamp, lastModifiedAt } = props.message;
+            if (!lastModifiedAt || !timestamp) return false;
+            
+            const createdDate = new Date(timestamp);
+            const modifiedDate = new Date(lastModifiedAt);
+            
+            // Check if dates are valid
+            if (isNaN(createdDate.getTime()) || isNaN(modifiedDate.getTime())) return false;
+            
+            // Compare timestamps (allow 1 second tolerance for potential timing issues)
+            return Math.abs(modifiedDate.getTime() - createdDate.getTime()) > 1000;
+        });
+
+        // Format the modified date for tooltip
+        const modifiedTooltip = computed(() => {
+            if (!props.message.lastModifiedAt) return '';
+            return `Modifié le ${formatDateTime(props.message.lastModifiedAt, dateTimeOptions.value)}`;
+        });
+
         return {
             messageStyles,
             isImageFile,
@@ -457,6 +488,8 @@ export default {
             handleRightClick,
             highlightedMessageText,
             userInitials,
+            isModified,
+            modifiedTooltip,
             truncateText,
         };
     },
@@ -619,12 +652,33 @@ export default {
         }
     }
 
-    &__time {
+    &__footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+        margin-top: 4px;
         font-size: 0.6875rem;
         opacity: 0.7;
-        text-align: right;
-        margin-top: 4px;
         user-select: none;
+    }
+
+    &__modified {
+        font-style: italic;
+        cursor: help;
+        position: relative;
+        
+        &:hover {
+            opacity: 1;
+        }
+    }
+
+    &__footer-separator {
+        color: inherit;
+    }
+
+    &__time {
+        // No additional styles needed, inherits from footer
     }
 
     &__attachments {
