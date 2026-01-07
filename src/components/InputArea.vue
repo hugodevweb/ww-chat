@@ -283,6 +283,10 @@ export default {
             type: String,
             default: '20px',
         },
+        editIndicatorColor: {
+            type: String,
+            default: '#64748b',
+        },
         placeholder: {
             type: String,
             default: 'Type a message...',
@@ -835,9 +839,9 @@ export default {
         align-items: center;
         justify-content: space-between;
         padding: 10px 14px;
-        background: linear-gradient(135deg, #eff6ff, #dbeafe);
+        background: #f8fafc;
         border-radius: 10px;
-        border: 1px solid #bfdbfe;
+        border: 1px solid v-bind('editIndicatorColor');
         animation: editIndicatorSlideIn 0.2s ease-out;
     }
 
@@ -845,7 +849,7 @@ export default {
         display: flex;
         align-items: center;
         gap: 8px;
-        color: #1d4ed8;
+        color: v-bind('editIndicatorColor');
     }
 
     &__edit-indicator-icon {
@@ -863,9 +867,9 @@ export default {
         gap: 4px;
         padding: 6px 12px;
         background: transparent;
-        border: 1px solid #93c5fd;
+        border: 1px solid v-bind('editIndicatorColor');
         border-radius: 6px;
-        color: #1d4ed8;
+        color: v-bind('editIndicatorColor');
         font-size: 0.75rem;
         font-weight: 600;
         cursor: pointer;
@@ -873,8 +877,9 @@ export default {
 
         &:hover {
             background: #ffffff;
-            border-color: #60a5fa;
-            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
+            border-color: v-bind('editIndicatorColor');
+            opacity: 0.8;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
         }
 
         &:active {

@@ -109,6 +109,19 @@ export default {
         const searchInputRef = ref(null);
         const popupStyle = ref({});
 
+        // Get the correct window/document for iframe support
+        const getFrontWindow = () => {
+            return typeof wwLib !== 'undefined' && wwLib.getFrontWindow 
+                ? wwLib.getFrontWindow() 
+                : window;
+        };
+
+        const getFrontDocument = () => {
+            return typeof wwLib !== 'undefined' && wwLib.getFrontDocument 
+                ? wwLib.getFrontDocument() 
+                : document;
+        };
+
         const categories = [
             { id: 'smileys', name: 'Smileys', icon: '😀' },
             { id: 'people', name: 'Personnes', icon: '👋' },
@@ -175,6 +188,11 @@ export default {
             const popupWidth = 320;
             const margin = 8;
 
+            // Get viewport dimensions from the correct window (iframe-aware)
+            const frontWindow = getFrontWindow();
+            const viewportWidth = frontWindow.innerWidth;
+            const viewportHeight = frontWindow.innerHeight;
+
             let top = triggerRect.top - popupHeight - margin;
             let left = triggerRect.left - popupWidth + triggerRect.width;
 
@@ -187,8 +205,13 @@ export default {
             if (left < margin) {
                 left = margin;
             }
-            if (left + popupWidth > window.innerWidth - margin) {
-                left = window.innerWidth - popupWidth - margin;
+            if (left + popupWidth > viewportWidth - margin) {
+                left = viewportWidth - popupWidth - margin;
+            }
+
+            // Ensure popup doesn't go below viewport
+            if (top + popupHeight > viewportHeight - margin) {
+                top = viewportHeight - popupHeight - margin;
             }
 
             popupStyle.value = {
@@ -210,15 +233,19 @@ export default {
         };
 
         onMounted(() => {
-            document.addEventListener('keydown', handleKeyDown);
-            window.addEventListener('resize', handleResize);
-            window.addEventListener('scroll', handleResize, true);
+            const frontDoc = getFrontDocument();
+            const frontWin = getFrontWindow();
+            frontDoc.addEventListener('keydown', handleKeyDown);
+            frontWin.addEventListener('resize', handleResize);
+            frontWin.addEventListener('scroll', handleResize, true);
         });
 
         onUnmounted(() => {
-            document.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('resize', handleResize);
-            window.removeEventListener('scroll', handleResize, true);
+            const frontDoc = getFrontDocument();
+            const frontWin = getFrontWindow();
+            frontDoc.removeEventListener('keydown', handleKeyDown);
+            frontWin.removeEventListener('resize', handleResize);
+            frontWin.removeEventListener('scroll', handleResize, true);
         });
 
         return {

@@ -117,6 +117,7 @@ export default {
                 'inputBorderRadius',
                 'inputPlaceholder',
                 'inputActionAlign',
+                'editIndicatorColor',
             ],
             // Icons
             [
@@ -1598,6 +1599,26 @@ export default {
             propertyHelp: {
                 tooltip:
                     'Placeholder text shown in text input when empty.\n\nExample: `Type a message...`',
+            },
+            /* wwEditor:end */
+        },
+        editIndicatorColor: {
+            label: { en: 'Edit Indicator Color' },
+            type: 'Color',
+            section: 'style',
+            bindable: true,
+            classes: true,
+            states: true,
+            responsive: true,
+            defaultValue: '#64748b',
+            /* wwEditor:start */
+            bindingValidation: {
+                type: 'string',
+                tooltip: 'Color used for borders and text in the edit indicator',
+            },
+            propertyHelp: {
+                tooltip:
+                    'Color for borders and text in the "Modification du message" indicator.\n\nExample: `#64748b`, `#94a3b8`',
             },
             /* wwEditor:end */
         },

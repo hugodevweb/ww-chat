@@ -76,6 +76,7 @@
             :textarea-border-focus="textareaBorderFocus"
             :input-height="inputHeight"
             :input-border-radius="inputBorderRadius"
+            :edit-indicator-color="editIndicatorColor"
             :placeholder="inputPlaceholder"
             :action-align="actionAlign"
             :send-icon="sendIcon"
@@ -458,6 +459,7 @@ export default {
         const textareaBorderFocus = computed(() => props.content?.textareaBorderFocus || '1px solid #3b82f6');
         const inputHeight = computed(() => props.content?.inputHeight || '47px');
         const inputBorderRadius = computed(() => props.content?.inputBorderRadius || '8px');
+        const editIndicatorColor = computed(() => props.content?.editIndicatorColor || '#64748b');
 
         // Empty message styles
         const emptyMessageText = computed(() => props.content?.emptyMessageText || 'No messages yet');
@@ -1190,6 +1192,7 @@ export default {
             textareaBorderFocus,
             inputHeight,
             inputBorderRadius,
+            editIndicatorColor,
 
             emptyMessageText,
             emptyMessageColor,

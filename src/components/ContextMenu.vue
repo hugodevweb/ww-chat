@@ -66,14 +66,28 @@ export default {
     setup(props, { emit }) {
         const menuRef = ref(null);
 
+        // Get the correct window/document for iframe support
+        const getFrontWindow = () => {
+            return typeof wwLib !== 'undefined' && wwLib.getFrontWindow 
+                ? wwLib.getFrontWindow() 
+                : window;
+        };
+
+        const getFrontDocument = () => {
+            return typeof wwLib !== 'undefined' && wwLib.getFrontDocument 
+                ? wwLib.getFrontDocument() 
+                : document;
+        };
+
         const positionStyle = computed(() => {
             // Basic positioning - will be adjusted after mount if needed
             let left = props.x;
             let top = props.y;
 
-            // Get viewport dimensions
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
+            // Get viewport dimensions from the correct window (iframe-aware)
+            const frontWindow = getFrontWindow();
+            const viewportWidth = frontWindow.innerWidth;
+            const viewportHeight = frontWindow.innerHeight;
 
             // Estimate menu dimensions (will refine after mount)
             const menuWidth = 180;
@@ -116,11 +130,11 @@ export default {
         };
 
         onMounted(() => {
-            document.addEventListener('keydown', handleKeyDown);
+            getFrontDocument().addEventListener('keydown', handleKeyDown);
         });
 
         onUnmounted(() => {
-            document.removeEventListener('keydown', handleKeyDown);
+            getFrontDocument().removeEventListener('keydown', handleKeyDown);
         });
 
         return {
