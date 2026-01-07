@@ -26,7 +26,7 @@
             </svg>
         </button>
 
-        <teleport to="body">
+        <teleport :to="teleportTarget">
             <div 
                 v-if="isOpen" 
                 ref="popupRef"
@@ -121,6 +121,12 @@ export default {
                 ? wwLib.getFrontDocument() 
                 : document;
         };
+
+        // Get the correct body element for teleport (iframe-aware)
+        const teleportTarget = computed(() => {
+            const frontDoc = getFrontDocument();
+            return frontDoc.body || 'body';
+        });
 
         const categories = [
             { id: 'smileys', name: 'Smileys', icon: '😀' },
@@ -258,6 +264,7 @@ export default {
             popupRef,
             searchInputRef,
             popupStyle,
+            teleportTarget,
             togglePicker,
             closePicker,
             selectEmoji,

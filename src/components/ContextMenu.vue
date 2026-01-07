@@ -1,5 +1,5 @@
 <template>
-    <teleport to="body">
+    <teleport :to="teleportTarget">
         <div 
             v-if="visible" 
             ref="menuRef"
@@ -79,33 +79,48 @@ export default {
                 : document;
         };
 
-        const positionStyle = computed(() => {
-            // Basic positioning - will be adjusted after mount if needed
-            let left = props.x;
-            let top = props.y;
+        // Get the correct body element for teleport (iframe-aware)
+        const teleportTarget = computed(() => {
+            const frontDoc = getFrontDocument();
+            return frontDoc.body || 'body';
+        });
 
+        const positionStyle = computed(() => {
             // Get viewport dimensions from the correct window (iframe-aware)
             const frontWindow = getFrontWindow();
             const viewportWidth = frontWindow.innerWidth;
             const viewportHeight = frontWindow.innerHeight;
 
-            // Estimate menu dimensions (will refine after mount)
+            // Menu dimensions estimate
             const menuWidth = 180;
-            const menuHeight = props.items.length * 40 + 16; // Rough estimate
+            const menuHeight = props.items.length * 40 + 16;
+            
+            // Minimum margin from screen edges
+            const edgeMargin = 20;
+
+            // Center the menu on the provided coordinates (which are centered on the message)
+            let left = props.x - (menuWidth / 2);
+            let top = props.y - (menuHeight / 2);
 
             // Adjust if menu would overflow right edge
-            if (left + menuWidth > viewportWidth - 10) {
-                left = viewportWidth - menuWidth - 10;
+            if (left + menuWidth > viewportWidth - edgeMargin) {
+                left = viewportWidth - menuWidth - edgeMargin;
+            }
+
+            // Adjust if menu would overflow left edge
+            if (left < edgeMargin) {
+                left = edgeMargin;
             }
 
             // Adjust if menu would overflow bottom edge
-            if (top + menuHeight > viewportHeight - 10) {
-                top = viewportHeight - menuHeight - 10;
+            if (top + menuHeight > viewportHeight - edgeMargin) {
+                top = viewportHeight - menuHeight - edgeMargin;
             }
 
-            // Ensure menu doesn't go off left or top
-            left = Math.max(10, left);
-            top = Math.max(10, top);
+            // Adjust if menu would overflow top edge
+            if (top < edgeMargin) {
+                top = edgeMargin;
+            }
 
             return {
                 left: `${left}px`,
@@ -139,6 +154,7 @@ export default {
 
         return {
             menuRef,
+            teleportTarget,
             positionStyle,
             handleItemClick,
             close,

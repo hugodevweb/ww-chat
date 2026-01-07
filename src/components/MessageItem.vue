@@ -287,6 +287,10 @@ export default {
         };
 
         const handleRightClick = event => {
+            // Get the message content element's bounding rect
+            const messageContentEl = event.currentTarget;
+            const messageRect = messageContentEl.getBoundingClientRect();
+            
             // Coordinates relative to the chat root element
             let elementX = 0;
             let elementY = 0;
@@ -301,9 +305,10 @@ export default {
                 elementY = event.clientY;
             }
 
-            // Coordinates relative to page top-left
-            const viewportX = event.pageX;
-            const viewportY = event.pageY;
+            // Calculate position centered over the message
+            // Position at the horizontal center of the message, vertically at the top
+            const viewportX = messageRect.left + (messageRect.width / 2);
+            const viewportY = messageRect.top + (messageRect.height / 2);
 
             emit('right-click', {
                 message: props.message,
@@ -311,6 +316,14 @@ export default {
                 elementY,
                 viewportX,
                 viewportY,
+                messageRect: {
+                    top: messageRect.top,
+                    left: messageRect.left,
+                    right: messageRect.right,
+                    bottom: messageRect.bottom,
+                    width: messageRect.width,
+                    height: messageRect.height,
+                },
             });
         };
 

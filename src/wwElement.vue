@@ -381,6 +381,9 @@ export default {
                     attachments = rawAttachments;
                 }
 
+                // Map replyToMessageId
+                const replyToMessageId = resolveMapping(message, props.content?.mappingMessageReplyId, 'replyToMessageId') || null;
+
                 return {
                     id:
                         resolveMapping(message, props.content?.mappingMessageId, 'id') ||
@@ -394,6 +397,7 @@ export default {
                     timestamp:
                         resolveMapping(message, props.content?.mappingTimestamp, 'timestamp') ||
                         new Date().toISOString(),
+                    replyToMessageId,
                     attachments,
                     mentions: message.mentions || [],
                     userSettings: userSettings,
