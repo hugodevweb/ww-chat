@@ -1513,7 +1513,7 @@ export default {
             classes: true,
             states: true,
             responsive: true,
-            defaultValue: '38px',
+            defaultValue: '47px',
             /* wwEditor:start */
             bindingValidation: {
                 type: 'string',
@@ -1521,7 +1521,7 @@ export default {
             },
             propertyHelp: {
                 tooltip:
-                    'Height of text input.\n\nExample: `38px`',
+                    'Height of text input.\n\nExample: `47px`',
             },
             /* wwEditor:end */
         },

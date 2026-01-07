@@ -456,7 +456,7 @@ export default {
         const textareaBorder = computed(() => props.content?.textareaBorder || '1px solid #e2e8f0');
         const textareaBorderHover = computed(() => props.content?.textareaBorderHover || '1px solid #cbd5e1');
         const textareaBorderFocus = computed(() => props.content?.textareaBorderFocus || '1px solid #3b82f6');
-        const inputHeight = computed(() => props.content?.inputHeight || '38px');
+        const inputHeight = computed(() => props.content?.inputHeight || '47px');
         const inputBorderRadius = computed(() => props.content?.inputBorderRadius || '8px');
 
         // Empty message styles

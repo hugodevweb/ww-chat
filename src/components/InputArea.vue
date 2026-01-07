@@ -128,6 +128,13 @@
                     @keydown="handleKeyDown"
                 ></textarea>
 
+                <!-- Emoji Picker -->
+                <EmojiPicker 
+                    class="ww-chat-input-area__emoji-picker"
+                    :disabled="isUiDisabled"
+                    @select="insertEmoji"
+                />
+
                 <!-- Mentions dropdown -->
                 <div
                     v-if="showMentionsDropdown"
@@ -182,9 +189,13 @@
 
 <script>
 import { ref, computed, watch, nextTick, onMounted, inject, watchEffect } from 'vue';
+import EmojiPicker from './EmojiPicker.vue';
 
 export default {
     name: 'InputArea',
+    components: {
+        EmojiPicker,
+    },
     props: {
         modelValue: {
             type: String,
@@ -266,7 +277,7 @@ export default {
         },
         inputHeight: {
             type: String,
-            default: '38px',
+            default: '47px',
         },
         inputBorderRadius: {
             type: String,
@@ -493,10 +504,22 @@ export default {
             const textarea = textareaRef.value;
             if (!textarea) return;
             
+            // Get the min-height value (parse from props.inputHeight, removing 'px' if present)
+            const minHeightValue = parseInt(props.inputHeight.replace('px', ''), 10) || 47;
+            
             // Reset height to auto to get accurate scrollHeight
             textarea.style.height = 'auto';
-            // Set height to scrollHeight (content height)
-            textarea.style.height = textarea.scrollHeight + 'px';
+            
+            // Calculate the desired height
+            const scrollHeight = textarea.scrollHeight;
+            
+            // If content is empty or minimal, use exactly min-height
+            // Otherwise, use the larger of min-height or scrollHeight
+            const isMinimalContent = !inputValue.value || inputValue.value.trim().length === 0;
+            const newHeight = isMinimalContent ? minHeightValue : Math.max(minHeightValue, scrollHeight);
+            
+            // Set height to the calculated value
+            textarea.style.height = newHeight + 'px';
         };
 
         const onEnterPress = event => {
@@ -533,6 +556,31 @@ export default {
             
             // Reset textarea height after clearing
             nextTick(() => resizeTextarea());
+        };
+
+        const insertEmoji = (emoji) => {
+            const textarea = textareaRef.value;
+            if (!textarea) {
+                // If no textarea, just append
+                inputValue.value = (inputValue.value || '') + emoji;
+                return;
+            }
+
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = inputValue.value || '';
+
+            // Insert emoji at cursor position
+            inputValue.value = text.slice(0, start) + emoji + text.slice(end);
+
+            // Restore cursor position after emoji
+            nextTick(() => {
+                const newPos = start + emoji.length;
+                textarea.selectionStart = newPos;
+                textarea.selectionEnd = newPos;
+                textarea.focus();
+                resizeTextarea();
+            });
         };
 
         // Mentions functionality
@@ -750,6 +798,7 @@ export default {
             handleAttachment,
             removeAttachment,
             onPendingAttachmentClick,
+            insertEmoji,
 
             // Mentions
             showMentionsDropdown,
@@ -851,7 +900,7 @@ export default {
 
     &__input-row {
         display: flex;
-        align-items: flex-end;
+        align-items: center;
         gap: 12px;
         width: 100%;
     }
@@ -1017,9 +1066,14 @@ export default {
     &__input-container {
         position: relative;
         flex: 1;
-        align-self: flex-end;
-        display: flex;
-        align-items: flex-end;
+        display: block;
+    }
+
+    &__emoji-picker {
+        position: absolute;
+        right: 8px;
+        bottom: 5px;
+        z-index: 5;
     }
 
     &__input {
@@ -1027,8 +1081,8 @@ export default {
         resize: none;
         min-height: v-bind('inputHeight');
         max-height: 30vh;
-        /* Padding for comfortable text input */
-        padding: 8px 16px;
+        /* Padding for comfortable text input, extra right padding for emoji button */
+        padding: 8px 42px 8px 16px;
         border-radius: v-bind('inputBorderRadius');
         font-size: v-bind('inputFontSize');
         font-weight: v-bind('inputFontWeight');
