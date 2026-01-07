@@ -43,6 +43,52 @@
             </button>
         </div>
 
+        <!-- Reply Mode Indicator -->
+        <div v-if="isReplyMode && replyingToMessage" class="ww-chat-input-area__reply-indicator">
+            <div class="ww-chat-input-area__reply-indicator-content">
+                <svg 
+                    class="ww-chat-input-area__reply-indicator-icon"
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="16" 
+                    height="16" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    stroke-width="2" 
+                    stroke-linecap="round" 
+                    stroke-linejoin="round"
+                >
+                    <polyline points="9 17 4 12 9 7"></polyline>
+                    <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+                </svg>
+                <div class="ww-chat-input-area__reply-indicator-info">
+                    <span class="ww-chat-input-area__reply-indicator-title">Répondre à {{ replyingToMessage.userName }}</span>
+                    <span class="ww-chat-input-area__reply-indicator-preview">{{ truncateText(replyingToMessage.text) }}</span>
+                </div>
+            </div>
+            <button 
+                type="button"
+                class="ww-chat-input-area__reply-cancel-btn" 
+                @click="cancelReply"
+            >
+                <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="16" 
+                    height="16" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    stroke-width="2" 
+                    stroke-linecap="round" 
+                    stroke-linejoin="round"
+                >
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <span>Annuler</span>
+            </button>
+        </div>
+
         <!-- Pending Attachments Display -->
         <div v-if="pendingAttachments.length > 0" class="ww-chat-input-area__attachments">
             <div
@@ -345,8 +391,17 @@ export default {
             type: String,
             default: null,
         },
+        // Reply mode props
+        isReplyMode: {
+            type: Boolean,
+            default: false,
+        },
+        replyingToMessage: {
+            type: Object,
+            default: null,
+        },
     },
-    emits: ['update:modelValue', 'send', 'attachment', 'remove-attachment', 'pending-attachment-click', 'cancel-edit'],
+    emits: ['update:modelValue', 'send', 'attachment', 'remove-attachment', 'pending-attachment-click', 'cancel-edit', 'cancel-reply'],
     setup(props, { emit }) {
         const isEditing = inject(
             'isEditing',
@@ -765,6 +820,17 @@ export default {
         const cancelEdit = () => {
             emit('cancel-edit');
         };
+        
+        const cancelReply = () => {
+            emit('cancel-reply');
+        };
+        
+        // Truncate text for reply preview
+        const truncateText = (text, maxLength = 100) => {
+            if (!text) return '';
+            if (text.length <= maxLength) return text;
+            return text.slice(0, maxLength) + '...';
+        };
 
             return {
                 textareaRef,
@@ -816,6 +882,10 @@ export default {
             
             // Edit mode
             cancelEdit,
+            
+            // Reply mode
+            cancelReply,
+            truncateText,
         };
     },
 };
@@ -893,6 +963,98 @@ export default {
     }
 
     @keyframes editIndicatorSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    &__reply-indicator {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        padding: 10px 14px;
+        background: #f8fafc;
+        border-radius: 10px;
+        border: 1px solid v-bind('editIndicatorColor');
+        border-left: 3px solid v-bind('editIndicatorColor');
+        animation: replyIndicatorSlideIn 0.2s ease-out;
+    }
+
+    &__reply-indicator-content {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        color: v-bind('editIndicatorColor');
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__reply-indicator-icon {
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    &__reply-indicator-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+        flex: 1;
+    }
+
+    &__reply-indicator-title {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: v-bind('editIndicatorColor');
+    }
+
+    &__reply-indicator-preview {
+        font-size: 0.75rem;
+        color: #64748b;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
+    }
+
+    &__reply-cancel-btn {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 12px;
+        background: transparent;
+        border: 1px solid v-bind('editIndicatorColor');
+        border-radius: 6px;
+        color: v-bind('editIndicatorColor');
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        flex-shrink: 0;
+
+        &:hover {
+            background: #ffffff;
+            border-color: v-bind('editIndicatorColor');
+            opacity: 0.8;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        &:active {
+            transform: scale(0.97);
+        }
+
+        svg {
+            width: 14px;
+            height: 14px;
+        }
+    }
+
+    @keyframes replyIndicatorSlideIn {
         from {
             opacity: 0;
             transform: translateY(-8px);

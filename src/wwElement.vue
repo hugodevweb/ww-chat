@@ -107,8 +107,11 @@
             @remove-attachment="handleRemoveAttachment"
             @pending-attachment-click="handlePendingAttachmentClick"
             @cancel-edit="cancelEdit"
+            @cancel-reply="cancelReply"
             :is-edit-mode="isEditMode"
             :editing-message-id="editingMessage?.id"
+            :is-reply-mode="isReplyMode"
+            :replying-to-message="replyingToMessage"
         />
 
         <!-- Context Menu -->
@@ -224,6 +227,10 @@ export default {
         const editingMessage = ref(null);
         const isEditMode = computed(() => !!editingMessage.value);
         const originalEditAttachments = ref([]);
+        
+        // Reply mode state
+        const replyingToMessage = ref(null);
+        const isReplyMode = computed(() => !!replyingToMessage.value);
         
         // Context menu state
         const contextMenu = ref({
@@ -585,6 +592,8 @@ export default {
                 senderId: currentUserId.value,
                 userName: currentUserParticipant.value?.name || 'You',
                 timestamp: new Date().toISOString(),
+                // Include replyToMessageId if replying to a message
+                replyToMessageId: replyingToMessage.value?.id || undefined,
                 // Emit attachments as File[] only, without id/url/name duplication
                 attachments: attachmentsForEvent.length > 0 ? attachmentsForEvent : undefined,
                 mentions: mentions.length > 0 ? mentions : undefined,
@@ -600,6 +609,8 @@ export default {
 
             newMessage.value = '';
             currentMentions.value = [];
+            // Clear reply state after sending
+            replyingToMessage.value = null;
 
             emit('trigger-event', {
                 name: 'messageSent',
@@ -653,15 +664,13 @@ export default {
         const handleMessageRightClick = ({ message, position }) => {
             if (isEditing.value) return;
 
-            // Show context menu for own messages
-            if (message.senderId === currentUserId.value) {
-                contextMenu.value = {
-                    visible: true,
-                    x: position.viewportX,
-                    y: position.viewportY,
-                    message: message,
-                };
-            }
+            // Show context menu for all messages (Reply is available for all, Edit only for own)
+            contextMenu.value = {
+                visible: true,
+                x: position.viewportX,
+                y: position.viewportY,
+                message: message,
+            };
 
             // Still emit the event for external handling
             emit('trigger-event', {
@@ -670,11 +679,19 @@ export default {
             });
         };
         
-        // Context menu items for own messages
+        // Context menu items
         const editIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
+        const replyIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>`;
         
         const contextMenuItems = computed(() => {
             const items = [];
+            
+            // Reply is available for all messages
+            items.push({
+                id: 'reply',
+                label: 'Répondre',
+                icon: replyIcon,
+            });
             
             // Only show Edit for own messages
             if (contextMenu.value.message?.senderId === currentUserId.value) {
@@ -689,7 +706,9 @@ export default {
         });
         
         const handleContextMenuAction = (action) => {
-            if (action.id === 'edit') {
+            if (action.id === 'reply') {
+                startReplyingToMessage(contextMenu.value.message);
+            } else if (action.id === 'edit') {
                 startEditingMessage(contextMenu.value.message);
             }
             closeContextMenu();
@@ -732,6 +751,21 @@ export default {
             newMessage.value = '';
             pendingAttachments.value = [];
             originalEditAttachments.value = [];
+        };
+        
+        const startReplyingToMessage = (message) => {
+            if (!message) return;
+            
+            // Cancel any ongoing edit first
+            if (isEditMode.value) {
+                cancelEdit();
+            }
+            
+            replyingToMessage.value = message;
+        };
+        
+        const cancelReply = () => {
+            replyingToMessage.value = null;
         };
 
         const handleClose = () => {
@@ -1257,6 +1291,9 @@ export default {
             handleContextMenuAction,
             closeContextMenu,
             cancelEdit,
+            replyingToMessage,
+            isReplyMode,
+            cancelReply,
         };
     },
     methods: {

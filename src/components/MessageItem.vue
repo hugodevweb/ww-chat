@@ -48,6 +48,19 @@
                 {{ message.userName }}
             </div>
 
+            <!-- Reply preview if this is a reply -->
+            <div 
+                v-if="replyToMessage" 
+                class="ww-message-item__reply-preview"
+                :class="{ 'ww-message-item__reply-preview--own': isOwnMessage }"
+            >
+                <div class="ww-message-item__reply-preview-bar"></div>
+                <div class="ww-message-item__reply-preview-content">
+                    <span class="ww-message-item__reply-preview-sender">{{ replyToMessage.userName }}</span>
+                    <span class="ww-message-item__reply-preview-text">{{ truncateText(replyToMessage.text, 100) }}</span>
+                </div>
+            </div>
+
             <!-- Message text -->
             <div class="ww-message-item__text" v-html="highlightedMessageText"></div>
 
@@ -196,6 +209,10 @@ export default {
         mentionsBgColor: {
             type: String,
             default: '#dbeafe',
+        },
+        replyToMessage: {
+            type: Object,
+            default: null,
         },
     },
     emits: ['attachment-click', 'right-click'],
@@ -411,6 +428,12 @@ export default {
             return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
         });
 
+        const truncateText = (text, maxLength = 100) => {
+            if (!text) return '';
+            if (text.length <= maxLength) return text;
+            return text.slice(0, maxLength) + '...';
+        };
+
         return {
             messageStyles,
             isImageFile,
@@ -421,6 +444,7 @@ export default {
             handleRightClick,
             highlightedMessageText,
             userInitials,
+            truncateText,
         };
     },
 };
@@ -504,6 +528,70 @@ export default {
         &--own {
             text-align: right;
         }
+    }
+
+    &__reply-preview {
+        display: flex;
+        gap: 8px;
+        padding: 8px 10px;
+        margin-bottom: 6px;
+        background: rgba(0, 0, 0, 0.04);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+
+        &:hover {
+            background: rgba(0, 0, 0, 0.06);
+        }
+
+        &--own {
+            background: rgba(255, 255, 255, 0.2);
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
+        }
+    }
+
+    &__reply-preview-bar {
+        width: 3px;
+        background: #64748b;
+        border-radius: 2px;
+        flex-shrink: 0;
+    }
+
+    .ww-message-item__reply-preview--own &__reply-preview-bar {
+        background: rgba(255, 255, 255, 0.6);
+    }
+
+    &__reply-preview-content {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+        flex: 1;
+    }
+
+    &__reply-preview-sender {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        color: #64748b;
+    }
+
+    .ww-message-item__reply-preview--own &__reply-preview-sender {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    &__reply-preview-text {
+        font-size: 0.75rem;
+        color: #64748b;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .ww-message-item__reply-preview--own &__reply-preview-text {
+        color: rgba(255, 255, 255, 0.7);
     }
 
     &__text {

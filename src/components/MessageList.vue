@@ -83,6 +83,7 @@
                     :own-message-radius="ownMessageRadius"
                     :mentions-color="mentionsColor"
                     :mentions-bg-color="mentionsBgColor"
+                    :reply-to-message="findReplyToMessage(message.replyToMessageId)"
                     @attachment-click="handleAttachmentClick"
                     @right-click="handleRightClick"
                 />
@@ -321,8 +322,15 @@ export default {
             });
         };
 
+        // Find the message being replied to by its ID
+        const findReplyToMessage = (replyToMessageId) => {
+            if (!replyToMessageId || !props.messages || props.messages.length === 0) return null;
+            return props.messages.find(msg => msg.id === replyToMessageId) || null;
+        };
+
         return {
             groupedMessages,
+            findReplyToMessage,
             isSameSenderAsPrevious,
             isSameSenderAsNext,
             handleAttachmentClick,

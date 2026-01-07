@@ -174,6 +174,7 @@ export default {
                 'mappingSenderId',
                 'mappingTimestamp',
                 'mappingAttachments',
+                'mappingMessageReplyId',
                 // Attachments Data mapping (visible only when mappingAttachments is bound)
                 'attachmentsDataTitle',
                 'mappingAttachmentId',
@@ -208,6 +209,7 @@ export default {
                     senderId: 'current-user',
                     userName: 'User',
                     timestamp: new Date().toISOString(),
+                    replyToMessageId: 'msg-0',
                     attachments: [
                         {
                             name: 'demo.txt',
@@ -2521,6 +2523,29 @@ export default {
             propertyHelp: {
                 tooltip:
                     'Mapping to the attachments in your `Messages` data.   \n\nExample mapping: `context.mapping?.["attachments"]`\nExample value:\n```json\n[{ \n  "id": "file-1", \n  "name": "image.png", \n  "type": "image/png", \n  "size": 204800, \n  "url": "https://www.file.com" \n}]\n```',
+            },
+            /* wwEditor:end */
+            hidden: (content, _, boundProps) => !boundProps.messages,
+        },
+        mappingMessageReplyId: {
+            label: { en: 'Reply To Message ID' },
+            type: 'Formula',
+            options: content => ({
+                template: Array.isArray(content.messages) && content.messages.length ? content.messages[0] : null,
+            }),
+            defaultValue: {
+                type: 'f',
+                code: "context.mapping?.['replyToMessageId'] ?? context.mapping?.['replyToId']",
+            },
+            section: 'settings',
+            /* wwEditor:start */
+            bindingValidation: {
+                type: 'formula',
+                tooltip: 'Formula to extract the ID of the message being replied to',
+            },
+            propertyHelp: {
+                tooltip:
+                    'Mapping to the reply-to message ID in your `Messages` data.\n\nExample mapping: `context.mapping?.["replyToMessageId"]`\nExample value: `msg-1`',
             },
             /* wwEditor:end */
             hidden: (content, _, boundProps) => !boundProps.messages,
