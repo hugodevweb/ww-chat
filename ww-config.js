@@ -295,6 +295,45 @@ export default {
             },
         },
         {
+            name: 'messageEdited',
+            label: { en: 'On message edited', fr: 'À la modification d\'un message' },
+            event: {
+                message: {
+                    id: 'msg-1',
+                    originalText: 'Original message content',
+                    newText: 'Updated message content',
+                    senderId: 'current-user',
+                    timestamp: new Date().toISOString(),
+                    // Attachment changes
+                    addedAttachments: [
+                        {
+                            name: 'new-file.pdf',
+                            type: 'application/pdf',
+                            size: 1024,
+                        },
+                    ],
+                    removedAttachments: [
+                        {
+                            id: 'att-1',
+                            name: 'old-file.pdf',
+                            type: 'application/pdf',
+                            size: 2048,
+                            url: 'https://example.com/old-file.pdf',
+                        },
+                    ],
+                    currentAttachments: [
+                        {
+                            id: 'att-2',
+                            name: 'kept-file.pdf',
+                            type: 'application/pdf',
+                            size: 4096,
+                            url: 'https://example.com/kept-file.pdf',
+                        },
+                    ],
+                },
+            },
+        },
+        {
             name: 'close',
             label: { en: 'On close' },
             event: {},

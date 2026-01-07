@@ -1,5 +1,48 @@
 <template>
     <div class="ww-chat-input-area">
+        <!-- Edit Mode Indicator -->
+        <div v-if="isEditMode" class="ww-chat-input-area__edit-indicator">
+            <div class="ww-chat-input-area__edit-indicator-content">
+                <svg 
+                    class="ww-chat-input-area__edit-indicator-icon"
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="16" 
+                    height="16" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    stroke-width="2" 
+                    stroke-linecap="round" 
+                    stroke-linejoin="round"
+                >
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                <span class="ww-chat-input-area__edit-indicator-text">Modification du message</span>
+            </div>
+            <button 
+                type="button"
+                class="ww-chat-input-area__edit-cancel-btn" 
+                @click="cancelEdit"
+            >
+                <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="16" 
+                    height="16" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    stroke-width="2" 
+                    stroke-linecap="round" 
+                    stroke-linejoin="round"
+                >
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <span>Annuler</span>
+            </button>
+        </div>
+
         <!-- Pending Attachments Display -->
         <div v-if="pendingAttachments.length > 0" class="ww-chat-input-area__attachments">
             <div
@@ -278,8 +321,17 @@ export default {
             type: String,
             default: '#dbeafe',
         },
+        // Edit mode props
+        isEditMode: {
+            type: Boolean,
+            default: false,
+        },
+        editingMessageId: {
+            type: String,
+            default: null,
+        },
     },
-    emits: ['update:modelValue', 'send', 'attachment', 'remove-attachment', 'pending-attachment-click'],
+    emits: ['update:modelValue', 'send', 'attachment', 'remove-attachment', 'pending-attachment-click', 'cancel-edit'],
     setup(props, { emit }) {
         const isEditing = inject(
             'isEditing',
@@ -657,6 +709,10 @@ export default {
             const i = Math.floor(Math.log(bytes) / Math.log(1024));
             return `${parseFloat((bytes / Math.pow(1024, i)).toFixed(2))} ${sizes[i]}`;
         };
+        
+        const cancelEdit = () => {
+            emit('cancel-edit');
+        };
 
             return {
                 textareaRef,
@@ -704,6 +760,9 @@ export default {
             handleInput,
             handleKeyDown,
             selectMention,
+            
+            // Edit mode
+            cancelEdit,
         };
     },
 };
@@ -721,6 +780,74 @@ export default {
     background-color: v-bind('inputBgColor');
     position: relative;
     box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.06);
+
+    &__edit-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        background: linear-gradient(135deg, #eff6ff, #dbeafe);
+        border-radius: 10px;
+        border: 1px solid #bfdbfe;
+        animation: editIndicatorSlideIn 0.2s ease-out;
+    }
+
+    &__edit-indicator-content {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #1d4ed8;
+    }
+
+    &__edit-indicator-icon {
+        flex-shrink: 0;
+    }
+
+    &__edit-indicator-text {
+        font-size: 0.8125rem;
+        font-weight: 600;
+    }
+
+    &__edit-cancel-btn {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 12px;
+        background: transparent;
+        border: 1px solid #93c5fd;
+        border-radius: 6px;
+        color: #1d4ed8;
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+
+        &:hover {
+            background: #ffffff;
+            border-color: #60a5fa;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
+        }
+
+        &:active {
+            transform: scale(0.97);
+        }
+
+        svg {
+            width: 14px;
+            height: 14px;
+        }
+    }
+
+    @keyframes editIndicatorSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
     &__input-row {
         display: flex;

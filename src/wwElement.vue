@@ -105,6 +105,19 @@
             @attachment="handleAttachment"
             @remove-attachment="handleRemoveAttachment"
             @pending-attachment-click="handlePendingAttachmentClick"
+            @cancel-edit="cancelEdit"
+            :is-edit-mode="isEditMode"
+            :editing-message-id="editingMessage?.id"
+        />
+
+        <!-- Context Menu -->
+        <ContextMenu
+            :visible="contextMenu.visible"
+            :x="contextMenu.x"
+            :y="contextMenu.y"
+            :items="contextMenuItems"
+            @select="handleContextMenuAction"
+            @close="closeContextMenu"
         />
     </div>
 </template>
@@ -114,6 +127,7 @@ import { ref, computed, watch, nextTick, provide, onMounted } from 'vue';
 import ChatHeader from './components/ChatHeader.vue';
 import MessageList from './components/MessageList.vue';
 import InputArea from './components/InputArea.vue';
+import ContextMenu from './components/ContextMenu.vue';
 
 import {
     enUS,
@@ -175,6 +189,7 @@ export default {
         ChatHeader,
         MessageList,
         InputArea,
+        ContextMenu,
     },
     props: {
         content: {
@@ -203,6 +218,19 @@ export default {
         const newMessage = ref('');
         const isScrolling = ref(false);
         const pendingAttachments = ref([]);
+        
+        // Edit mode state
+        const editingMessage = ref(null);
+        const isEditMode = computed(() => !!editingMessage.value);
+        const originalEditAttachments = ref([]);
+        
+        // Context menu state
+        const contextMenu = ref({
+            visible: false,
+            x: 0,
+            y: 0,
+            message: null,
+        });
 
         const debounce = (func, delay) => {
             let timeoutId;
@@ -488,6 +516,59 @@ export default {
         const sendMessage = (mentions = []) => {
             if (isEditing.value || isDisabled.value || (!newMessage.value.trim() && pendingAttachments.value.length === 0)) return;
 
+            // Handle edit mode - emit messageEdited event
+            if (isEditMode.value && editingMessage.value) {
+                const currentAttachments = [...pendingAttachments.value];
+                
+                // Calculate attachment changes
+                const originalIds = new Set(originalEditAttachments.value.map(att => att.id));
+                const currentIds = new Set(currentAttachments.map(att => att.id));
+                
+                // Added attachments: new ones that aren't in original (or have file property = newly uploaded)
+                const addedAttachments = currentAttachments
+                    .filter(att => !att.isExisting || !originalIds.has(att.id))
+                    .map(att => att.file || att);
+                
+                // Removed attachments: originals that are no longer in current
+                const removedAttachments = originalEditAttachments.value
+                    .filter(att => !currentIds.has(att.id));
+                
+                // Current attachments (final state) - for existing keep metadata, for new just file
+                const finalAttachments = currentAttachments.map(att => {
+                    if (att.isExisting) {
+                        const { isExisting, ...rest } = att;
+                        return rest;
+                    }
+                    return att.file || att;
+                });
+                
+                const editedMessage = {
+                    id: editingMessage.value.id,
+                    originalText: editingMessage.value.text,
+                    newText: newMessage.value.trim(),
+                    senderId: editingMessage.value.senderId,
+                    timestamp: new Date().toISOString(),
+                    mentions: mentions.length > 0 ? mentions : undefined,
+                    addedAttachments: addedAttachments.length > 0 ? addedAttachments : [],
+                    removedAttachments: removedAttachments.length > 0 ? removedAttachments : [],
+                    currentAttachments: finalAttachments.length > 0 ? finalAttachments : [],
+                };
+                
+                // Clear edit state
+                editingMessage.value = null;
+                newMessage.value = '';
+                pendingAttachments.value = [];
+                originalEditAttachments.value = [];
+                currentMentions.value = [];
+                
+                emit('trigger-event', {
+                    name: 'messageEdited',
+                    event: { message: editedMessage },
+                });
+                
+                return;
+            }
+
             const attachments = [...pendingAttachments.value];
             // For the emitted event, only expose File objects (no id/url metadata)
             const attachmentsForEvent = attachments
@@ -570,10 +651,85 @@ export default {
         const handleMessageRightClick = ({ message, position }) => {
             if (isEditing.value) return;
 
+            // Show context menu for own messages
+            if (message.senderId === currentUserId.value) {
+                contextMenu.value = {
+                    visible: true,
+                    x: position.viewportX,
+                    y: position.viewportY,
+                    message: message,
+                };
+            }
+
+            // Still emit the event for external handling
             emit('trigger-event', {
                 name: 'messageRightClick',
                 event: { message, position },
             });
+        };
+        
+        // Context menu items for own messages
+        const editIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
+        
+        const contextMenuItems = computed(() => {
+            const items = [];
+            
+            // Only show Edit for own messages
+            if (contextMenu.value.message?.senderId === currentUserId.value) {
+                items.push({
+                    id: 'edit',
+                    label: 'Modifier le message',
+                    icon: editIcon,
+                });
+            }
+            
+            return items;
+        });
+        
+        const handleContextMenuAction = (action) => {
+            if (action.id === 'edit') {
+                startEditingMessage(contextMenu.value.message);
+            }
+            closeContextMenu();
+        };
+        
+        const closeContextMenu = () => {
+            contextMenu.value.visible = false;
+        };
+        
+        const startEditingMessage = (message) => {
+            if (!message) return;
+            
+            editingMessage.value = message;
+            newMessage.value = message.text || '';
+            
+            // Load existing attachments
+            loadEditingAttachments(message.attachments);
+        };
+        
+        const loadEditingAttachments = (attachments) => {
+            if (!attachments || !Array.isArray(attachments)) {
+                pendingAttachments.value = [];
+                originalEditAttachments.value = [];
+                return;
+            }
+            
+            // Convert existing attachments to pending format (mark as 'existing')
+            const existing = attachments.map(att => ({
+                ...att,
+                id: att.id || `existing-${wwLib.wwUtils.getUid()}`,
+                isExisting: true,
+            }));
+            
+            pendingAttachments.value = [...existing];
+            originalEditAttachments.value = [...existing];
+        };
+        
+        const cancelEdit = () => {
+            editingMessage.value = null;
+            newMessage.value = '';
+            pendingAttachments.value = [];
+            originalEditAttachments.value = [];
         };
 
         const handleClose = () => {
@@ -1089,6 +1245,15 @@ export default {
             messagesAttachmentThumbMaxHeight,
             messagesAttachmentThumbBorderRadius,
             headerAvatarBgColor,
+            
+            // Edit mode & Context menu
+            isEditMode,
+            editingMessage,
+            contextMenu,
+            contextMenuItems,
+            handleContextMenuAction,
+            closeContextMenu,
+            cancelEdit,
         };
     },
     methods: {
