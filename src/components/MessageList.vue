@@ -49,8 +49,12 @@
         </div>
 
         <!-- Messages -->
-        <transition-group v-else name="message-transition" tag="div">
-            <div v-for="(message, index) in groupedMessages" :key="message.key">
+        <transition-group v-else name="message-transition" tag="div" ref="messagesContainerRef">
+            <div 
+                v-for="(message, index) in groupedMessages" 
+                :key="message.key"
+                :data-message-id="message.type !== 'date-separator' ? message.id : undefined"
+            >
                 <!-- Date separator -->
                 <div
                     v-if="message.type === 'date-separator'"
@@ -86,6 +90,7 @@
                     :reply-to-message="findReplyToMessage(message.replyToMessageId)"
                     @attachment-click="handleAttachmentClick"
                     @right-click="handleRightClick"
+                    @reply-click="handleReplyClick"
                 />
             </div>
         </transition-group>
@@ -93,7 +98,7 @@
 </template>
 
 <script>
-import { computed, inject } from 'vue';
+import { computed, inject, ref } from 'vue';
 import MessageItem from './MessageItem.vue';
 import { formatDate } from '../utils/dateTimeFormatter';
 
@@ -216,6 +221,8 @@ export default {
             computed(() => ({}))
         );
 
+        const messagesContainerRef = ref(null);
+
         const emptyMessageStyle = computed(() => ({
             color: props.emptyMessageColor,
         }));
@@ -328,6 +335,39 @@ export default {
             return props.messages.find(msg => msg.id === replyToMessageId) || null;
         };
 
+        // Handle click on reply preview - scroll to the original message
+        const handleReplyClick = (messageId) => {
+            if (isEditing.value || !messageId) return;
+            
+            // Find the message element by data-message-id
+            const container = messagesContainerRef.value?.$el || messagesContainerRef.value;
+            if (!container) return;
+            
+            const messageEl = container.querySelector(`[data-message-id="${messageId}"]`);
+            if (!messageEl) return;
+            
+            // Get the scrollable parent (messages container in wwElement.vue)
+            const scrollableParent = messageEl.closest('.ww-chat__messages');
+            if (!scrollableParent) return;
+            
+            // Calculate scroll position to center the message in the viewport
+            const containerRect = scrollableParent.getBoundingClientRect();
+            const messageRect = messageEl.getBoundingClientRect();
+            const scrollTop = scrollableParent.scrollTop + messageRect.top - containerRect.top - (containerRect.height / 2) + (messageRect.height / 2);
+            
+            // Scroll to the message
+            scrollableParent.scrollTo({
+                top: Math.max(0, scrollTop),
+                behavior: 'smooth',
+            });
+            
+            // Add highlight animation
+            messageEl.classList.add('ww-message-highlight');
+            setTimeout(() => {
+                messageEl.classList.remove('ww-message-highlight');
+            }, 1500);
+        };
+
         return {
             groupedMessages,
             findReplyToMessage,
@@ -335,11 +375,13 @@ export default {
             isSameSenderAsNext,
             handleAttachmentClick,
             handleRightClick,
+            handleReplyClick,
             emptyMessageStyle,
             dateSeparatorStyle,
             skeletonOtherStyle,
             skeletonOwnStyle,
             dateTimeOptions,
+            messagesContainerRef,
         };
     },
 };
@@ -511,5 +553,22 @@ export default {
 
 .message-transition-move {
     transition: transform 0.3s;
+}
+
+// Highlight animation when scrolling to a message via reply click
+:deep(.ww-message-highlight) {
+    animation: message-highlight-pulse 1.5s ease-out;
+}
+
+@keyframes message-highlight-pulse {
+    0% {
+        background-color: transparent;
+    }
+    20% {
+        background-color: rgba(59, 130, 246, 0.15);
+    }
+    100% {
+        background-color: transparent;
+    }
 }
 </style>

@@ -53,6 +53,7 @@
                 v-if="replyToMessage" 
                 class="ww-message-item__reply-preview"
                 :class="{ 'ww-message-item__reply-preview--own': isOwnMessage }"
+                @click="handleReplyClick"
             >
                 <div class="ww-message-item__reply-preview-bar"></div>
                 <div class="ww-message-item__reply-preview-content">
@@ -225,7 +226,7 @@ export default {
             default: null,
         },
     },
-    emits: ['attachment-click', 'right-click'],
+    emits: ['attachment-click', 'right-click', 'reply-click'],
     setup(props, { emit }) {
         const isEditing = inject(
             'isEditing',
@@ -335,6 +336,13 @@ export default {
                     height: messageRect.height,
                 },
             });
+        };
+
+        const handleReplyClick = () => {
+            if (isEditing.value) return;
+            if (props.replyToMessage?.id) {
+                emit('reply-click', props.replyToMessage.id);
+            }
         };
 
         // Helper function to escape HTML and convert newlines to <br>
@@ -486,6 +494,7 @@ export default {
             formatMessageTime,
             handleAttachmentClick,
             handleRightClick,
+            handleReplyClick,
             highlightedMessageText,
             userInitials,
             isModified,
