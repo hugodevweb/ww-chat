@@ -70,49 +70,72 @@
                 <div
                     v-for="(attachmentMeta, index) in formattedAttachments"
                     :key="attachmentMeta.attachment.id ?? index"
+                    :ref="el => registerAttachmentRef(el, attachmentMeta.attachment, index)"
                     class="ww-message-item__attachment"
                     :class="{ 'ww-message-item__attachment--own': isOwnMessage }"
                     @click="handleAttachmentClick(attachmentMeta.attachment)"
                 >
-                    <!-- Image preview for image files -->
-                    <div
-                        v-if="attachmentMeta.isImage"
-                        class="ww-message-item__attachment-preview"
-                        :class="{ 'ww-message-item__attachment-preview--own': isOwnMessage }"
-                    >
-                        <img :src="attachmentMeta.attachment.url" :alt="attachmentMeta.attachment.name" />
-                    </div>
-
-                    <!-- File icon for non-image files -->
-                    <div
-                        v-else
-                        class="ww-message-item__attachment-file"
-                        :class="{ 'ww-message-item__attachment-file--own': isOwnMessage }"
-                    >
-                        <div class="ww-message-item__attachment-icon">
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            >
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                                <line x1="16" y1="13" x2="8" y2="13"></line>
-                            </svg>
-                        </div>
-                        <div class="ww-message-item__attachment-info">
-                            <div class="ww-message-item__attachment-name">{{ attachmentMeta.attachment.name }}</div>
-                            <div v-if="attachmentMeta.formattedSize" class="ww-message-item__attachment-size">
-                                {{ attachmentMeta.formattedSize }}
+                    <!-- Skeleton: shown while waiting for a signed URL -->
+                    <template v-if="!resolveAttachmentUrl(attachmentMeta.attachment)">
+                        <!-- Image skeleton -->
+                        <div
+                            v-if="attachmentMeta.isImage"
+                            class="ww-message-item__attachment-skeleton ww-message-item__attachment-skeleton--image"
+                        />
+                        <!-- File skeleton -->
+                        <div
+                            v-else
+                            class="ww-message-item__attachment-skeleton ww-message-item__attachment-skeleton--file"
+                        >
+                            <div class="ww-message-item__attachment-skeleton__icon" />
+                            <div class="ww-message-item__attachment-skeleton__info">
+                                <div class="ww-message-item__attachment-skeleton__line ww-message-item__attachment-skeleton__line--name" />
+                                <div class="ww-message-item__attachment-skeleton__line ww-message-item__attachment-skeleton__line--size" />
                             </div>
                         </div>
-                    </div>
+                    </template>
+
+                    <!-- Image preview for image files -->
+                    <template v-else>
+                        <div
+                            v-if="attachmentMeta.isImage"
+                            class="ww-message-item__attachment-preview"
+                            :class="{ 'ww-message-item__attachment-preview--own': isOwnMessage }"
+                        >
+                            <img :src="resolveAttachmentUrl(attachmentMeta.attachment)" :alt="attachmentMeta.attachment.name" />
+                        </div>
+
+                        <!-- File icon for non-image files -->
+                        <div
+                            v-else
+                            class="ww-message-item__attachment-file"
+                            :class="{ 'ww-message-item__attachment-file--own': isOwnMessage }"
+                        >
+                            <div class="ww-message-item__attachment-icon">
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                </svg>
+                            </div>
+                            <div class="ww-message-item__attachment-info">
+                                <div class="ww-message-item__attachment-name">{{ attachmentMeta.attachment.name }}</div>
+                                <div v-if="attachmentMeta.formattedSize" class="ww-message-item__attachment-size">
+                                    {{ attachmentMeta.formattedSize }}
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
 
@@ -135,7 +158,7 @@
 </template>
 
 <script>
-import { computed, inject } from 'vue';
+import { computed, inject, onMounted, onUnmounted } from 'vue';
 import { formatTime, formatDateTime } from '../utils/dateTimeFormatter';
 
 export default {
@@ -225,9 +248,53 @@ export default {
             type: Object,
             default: null,
         },
+        signedUrlsMap: {
+            type: Array,
+            default: () => [],
+        },
     },
-    emits: ['attachment-click', 'right-click', 'reply-click'],
+    emits: ['attachment-click', 'right-click', 'reply-click', 'attachment-visible'],
     setup(props, { emit }) {
+        // IntersectionObserver — fires 'attachment-visible' when an attachment enters
+        // the viewport and has no resolved URL yet (not in signedUrlsMap).
+        let attachmentObserver = null;
+        const observedAttachments = new Map(); // element → { attachment, index }
+
+        const registerAttachmentRef = (el, attachment, index) => {
+            if (!el) return;
+            observedAttachments.set(el, { attachment, index });
+            if (attachmentObserver) attachmentObserver.observe(el);
+        };
+
+        onMounted(() => {
+            attachmentObserver = new IntersectionObserver(
+                entries => {
+                    entries.forEach(entry => {
+                        if (!entry.isIntersecting) return;
+                        const data = observedAttachments.get(entry.target);
+                        if (!data) return;
+                        const { attachment } = data;
+                        // Only fire if no URL is resolved yet (neither from the array nor the data)
+                        const resolved = props.signedUrlsMap?.find?.(e => e.id === attachment.id);
+                        if (!resolved?.url && !attachment.url) {
+                            emit('attachment-visible', attachment);
+                        }
+                    });
+                },
+                { threshold: 0.1 }
+            );
+            // Observe elements registered before mount (fast renders)
+            observedAttachments.forEach((_, el) => attachmentObserver.observe(el));
+        });
+
+        onUnmounted(() => {
+            if (attachmentObserver) {
+                attachmentObserver.disconnect();
+                attachmentObserver = null;
+            }
+            observedAttachments.clear();
+        });
+
         const isEditing = inject(
             'isEditing',
             computed(() => false)
@@ -486,6 +553,12 @@ export default {
             return `Modifié le ${formatDateTime(props.message.lastModifiedAt, dateTimeOptions.value)}`;
         });
 
+        // Returns the best available URL: signed (from array) → original → null
+        const resolveAttachmentUrl = attachment => {
+            const entry = props.signedUrlsMap?.find?.(e => e.id === attachment.id);
+            return entry?.url || attachment.url || null;
+        };
+
         return {
             messageStyles,
             isImageFile,
@@ -500,6 +573,8 @@ export default {
             isModified,
             modifiedTooltip,
             truncateText,
+            registerAttachmentRef,
+            resolveAttachmentUrl,
         };
     },
 };
@@ -783,6 +858,72 @@ export default {
     &__attachment-size {
         font-size: 0.75rem;
         opacity: 0.7;
+    }
+
+    // Skeleton shimmer
+    &__attachment-skeleton {
+        @keyframes ww-skeleton-shimmer {
+            0%   { background-position: -400px 0; }
+            100% { background-position:  400px 0; }
+        }
+
+        $shimmer: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0.06) 75%);
+
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.1) $shimmer;
+        background-size: 800px 100%;
+        animation: ww-skeleton-shimmer 1.4s ease-in-out infinite;
+
+        // Image skeleton — matches attachment-preview dimensions
+        &--image {
+            width: var(--ww-chat-attachment-thumb-max-width, 250px);
+            height: 150px;
+            border-radius: var(--ww-chat-attachment-thumb-radius, 6px);
+        }
+
+        // File skeleton — matches attachment-file pill
+        &--file {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            width: 200px;
+            background: rgba(255, 255, 255, 0.1) $shimmer;
+            background-size: 800px 100%;
+            animation: ww-skeleton-shimmer 1.4s ease-in-out infinite;
+            border-radius: 6px;
+        }
+
+        &__icon {
+            width: 24px;
+            height: 24px;
+            min-width: 24px;
+            border-radius: 4px;
+            margin-right: 8px;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        &__info {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        &__line {
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.15);
+
+            &--name {
+                height: 10px;
+                width: 80%;
+            }
+
+            &--size {
+                height: 8px;
+                width: 40%;
+            }
+        }
     }
 }
 </style>

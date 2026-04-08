@@ -88,7 +88,9 @@
                     :mentions-color="mentionsColor"
                     :mentions-bg-color="mentionsBgColor"
                     :reply-to-message="findReplyToMessage(message.replyToMessageId)"
+                    :signed-urls-map="signedUrlsMap"
                     @attachment-click="handleAttachmentClick"
+                    @attachment-visible="$emit('attachment-visible', $event)"
                     @right-click="handleRightClick"
                     @reply-click="handleReplyClick"
                 />
@@ -208,8 +210,12 @@ export default {
             type: String,
             default: '#dbeafe',
         },
+        signedUrlsMap: {
+            type: Array,
+            default: () => [],
+        },
     },
-    emits: ['attachment-click', 'message-right-click'],
+    emits: ['attachment-click', 'attachment-visible', 'message-right-click'],
     setup(props, { emit }) {
         const isEditing = inject(
             'isEditing',

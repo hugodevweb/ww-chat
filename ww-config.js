@@ -183,7 +183,10 @@ export default {
                 'mappingAttachmentUrl',
                 'mappingAttachmentType',
                 'mappingAttachmentSize',
+                'mappingAttachmentPath',
             ],
+            // Signed URLs
+            ['signedUrlsTitle', 'signedUrlsMap'],
             // Participant data
             [
                 'participantDataTitle',
@@ -281,6 +284,23 @@ export default {
                     type: 'application/pdf',
                     size: 1024000,
                     url: 'https://example.com/document.pdf',
+                },
+            },
+        },
+        {
+            name: 'attachmentVisible',
+            label: { en: 'On attachment visible' },
+            event: {
+                // Fired when an attachment enters the viewport and has no resolved URL yet
+                // (neither in signedUrlsMap nor in attachment.url).
+                // Use event.attachment to call your signed URL action, then append the
+                // returned object (which includes id + url) to your signedUrlsMap variable.
+                attachment: {
+                    id: '2b3c2a7d-9f4b-4bee-80ed-d64005d84374',
+                    name: 'sample.pdf',
+                    type: 'application/pdf',
+                    size: 18810,
+                    // url is absent — that is what triggers this event
                 },
             },
         },
@@ -2725,6 +2745,52 @@ export default {
                 const hasAttachmentsMapping = !!content?.mappingAttachments?.code;
                 return !(hasMessages && hasAttachmentsMapping);
             },
+        },
+
+        mappingAttachmentPath: {
+            label: { en: 'Storage Path' },
+            type: 'Formula',
+            options: content => {
+                const messages = Array.isArray(content.messages) ? content.messages : [];
+                return { template: __pickFirstAttachmentByMapping(messages, content?.mappingAttachments) };
+            },
+            defaultValue: { type: 'f', code: "context.mapping?.['path']" },
+            section: 'settings',
+            /* wwEditor:start */
+            bindingValidation: { type: 'formula', tooltip: 'Formula that returns the storage path of the attachment' },
+            propertyHelp: {
+                tooltip:
+                    'Mapping to the storage path in your `Attachments` data. This is passed in the **"On attachment visible"** event payload so your workflow can use it to generate a signed URL.\n\nExample mapping: `context.mapping?.["path"]`\nExample value: `outgoings/29b87547/2b3c2a7d_sample.pdf`',
+            },
+            /* wwEditor:end */
+            hidden: (content, _, boundProps) => {
+                const hasMessages = !!boundProps?.messages;
+                const hasAttachmentsMapping = !!content?.mappingAttachments?.code;
+                return !(hasMessages && hasAttachmentsMapping);
+            },
+        },
+
+        // Signed URLs
+        signedUrlsTitle: {
+            type: 'Title',
+            label: { en: 'Signed URLs' },
+            section: 'settings',
+        },
+        signedUrlsMap: {
+            label: { en: 'Signed URLs Map' },
+            section: 'settings',
+            bindable: true,
+            defaultValue: [],
+            /* wwEditor:start */
+            bindingValidation: {
+                type: 'array',
+                tooltip: 'Array of attachment objects, each containing at least `id` and `url` (signed URL).',
+            },
+            propertyHelp: {
+                tooltip:
+                    '## Signed URLs Map\n\nAn **array of attachment objects** where each entry must include an `id` and a `url` (the signed URL). All other fields are optional but preserved.\n\n```json\n[\n  {\n    "id": "2b3c2a7d-9f4b-4bee-80ed-d64005d84374",\n    "name": "sample.pdf",\n    "type": "application/pdf",\n    "url": "https://your-storage.com/file?token=..."\n  }\n]\n```\n\n---\n\n### How it works\n\n1. When an attachment scrolls into view and has no URL yet, the **"On attachment visible"** event fires with the attachment object.\n2. Your workflow receives `event.attachment` and calls your signed URL action (e.g. Supabase Storage).\n3. Store the full result object in a WeWeb variable of type **Array**, appending the new entry:\n   ```js\n   // Formula to append in your variable update action\n   [...signedUrlsVariable, result]\n   ```\n4. Bind that variable to this **Signed URLs Map** prop.\n5. The component looks up the entry by `id` and displays its `url`.\n\n---\n\n### Priority\n\nFor each attachment the component resolves the URL in this order:\n1. `signedUrlsMap.find(e => e.id === attachment.id).url` — signed entry from this array *(highest priority)*\n2. `attachment.url` — URL already present in your messages data\n3. No URL — attachment renders without a preview\n\n---\n\n### Tips\n\n- The event only fires when the attachment has **no URL yet** (neither in this array nor in the data), so nothing is re-requested unnecessarily.\n- To force a refresh after expiry, remove the entry from the variable array and the event will fire again on next scroll.\n- You can pre-populate the array for attachments you know will be visible on load.',
+            },
+            /* wwEditor:end */
         },
 
         // Participant data

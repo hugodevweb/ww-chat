@@ -51,7 +51,9 @@
                 :date-separator-border-radius="dateSeparatorBorderRadius"
                 :mentions-color="mentionsColor"
                 :mentions-bg-color="mentionsBgColor"
+                :signed-urls-map="signedUrlsMap"
                 @attachment-click="handleAttachmentClick"
+                @attachment-visible="handleAttachmentVisible"
                 @message-right-click="handleMessageRightClick"
             />
         </div>
@@ -373,6 +375,7 @@ export default {
                             url: mapAttachmentField(att, props.content?.mappingAttachmentUrl, 'url'),
                             type: mapAttachmentField(att, props.content?.mappingAttachmentType, 'type'),
                             size: mapAttachmentField(att, props.content?.mappingAttachmentSize, 'size'),
+                            path: mapAttachmentField(att, props.content?.mappingAttachmentPath, 'path'),
                             // Preserve local upload File if present
                             file: att.file,
                         };
@@ -413,6 +416,7 @@ export default {
         const isDisabled = computed(() => props.content?.disabled || false);
         const displayHeader = computed(() => props.content?.displayHeader !== false);
         const allowAttachments = computed(() => props.content?.allowAttachments || false);
+        const signedUrlsMap = computed(() => props.content?.signedUrlsMap || []);
         const inputPlaceholder = computed(() => props.content?.inputPlaceholder || 'Type a message...');
         const isLoading = computed(() => props.content?.isLoading || false);
 
@@ -655,8 +659,18 @@ export default {
         const handleAttachmentClick = attachment => {
             if (isEditing.value) return;
 
+            const signedEntry = signedUrlsMap.value?.find?.(e => e.id === attachment.id);
+            const resolvedUrl = signedEntry?.url || attachment.url || null;
+
             emit('trigger-event', {
                 name: 'attachmentClick',
+                event: { attachment: { ...attachment, url: resolvedUrl } },
+            });
+        };
+
+        const handleAttachmentVisible = attachment => {
+            emit('trigger-event', {
+                name: 'attachmentVisible',
                 event: { attachment },
             });
         };
@@ -1281,6 +1295,8 @@ export default {
             handleRemoveAttachment,
             handlePendingAttachmentClick,
             handleAttachmentClick,
+            handleAttachmentVisible,
+            signedUrlsMap,
             handleMessageRightClick,
             handleClose,
             addMessage,
